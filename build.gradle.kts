@@ -21,7 +21,6 @@ repositories {
     //jcenter()
     maven("https://jitpack.io")
     maven("https://maven.walt.id/repository/waltid/")
-    maven("https://maven.walt.id/repository/waltid-xyzkit/")
     mavenLocal()
 }
 
@@ -145,7 +144,7 @@ publishing {
 
     repositories {
         maven {
-            url = uri("https://maven.walt.id/repository/waltid-xyzkit/")
+            url = uri("https://maven.walt.id/repository/waltid/")
             val envUsername = System.getenv("MAVEN_USERNAME")
             val envPassword = System.getenv("MAVEN_PASSWORD")
 
