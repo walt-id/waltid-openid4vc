@@ -11,12 +11,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Set release version
+      - name: Calc release version
         run: |
           echo "release_version=1.$(date +'%g%m%d%k')" >> $GITHUB_ENV
       - name: Use the value
         run: |
-          echo "${{ env.release_version }}" 
-
-      - name: Call a Bash Script
-        run:  ./xyzkit set-release-version
+          echo "${{ env.release_version }}"
+      - name: Set version
+        run: |
+          sed -i "s/1.SNAPSHOT/${{ env.release_version }}/g" build.gradle.kts src/main/kotlin/id/walt/Values.kt
