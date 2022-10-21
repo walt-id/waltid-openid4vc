@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-version='1.0.0'
+version='1.SNAPSHOT'
 
 function header() {
   echo "waltid-xyzkit wrapper script"
