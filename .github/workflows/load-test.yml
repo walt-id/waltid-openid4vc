@@ -1,3 +1,4 @@
+name: load testing
 on:
   push:
     branches:
