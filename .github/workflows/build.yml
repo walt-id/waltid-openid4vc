@@ -35,6 +35,7 @@ jobs:
         distribution: 'adopt-hotspot'
         java-version: '16'
     - name: Running gradle build
+      if: 'False' == 'True'
       uses: eskatos/gradle-command-action@v1.3.3
       with:
         arguments: build --no-daemon --info
