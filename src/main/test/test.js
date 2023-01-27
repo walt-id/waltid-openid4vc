@@ -12,8 +12,24 @@ export const options = {
     },
 };
 
+
+
 export default function () {
-    const res = http.get('https://test.k6.io/contacts.php');
+    let params = {
+        "templateId": "VerifiableId",
+        "config": {
+            "issuerDid": "did:web:walt.id",
+            "subjectDid": "did:web:walt.id"
+        },
+        "credentialData": {
+            "credentialSubject": {
+                "firstName": "issuance test"
+            }
+        }
+    }
+    const url = 'https://signatory.ssikit.walt.id/v1/swagger#/Credentials/issue';
+
+    const res = (http.post(url, JSON.stringify(params),{  headers: { 'Content-Type': 'application/json' }}));
     sleep(1);
 }
 export function handleSummary(data) {
