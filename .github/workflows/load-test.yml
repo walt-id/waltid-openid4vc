@@ -6,8 +6,8 @@ on:
   pull_request:
     branches:
       - main
-  schedule:
-    - cron: "*/5 * * * *"
+#  schedule:
+#   - cron: "*/5 * * * *"
 jobs:
   k6_load_test:
     name: k6 Load Test
