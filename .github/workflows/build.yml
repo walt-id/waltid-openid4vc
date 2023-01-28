@@ -35,7 +35,32 @@ jobs:
         distribution: 'adopt-hotspot'
         java-version: '16'
     - name: Running gradle build
-      if: 'False' == 'True'
       uses: eskatos/gradle-command-action@v1.3.3
       with:
         arguments: build --no-daemon --info
+    - name: Changelog
+      uses: ardalanamini/auto-changelog@v3
+      id: changelog
+      with:
+        github-token: ${{ github.token }}
+        commit-types: |
+          breaking: Breaking Changes
+          feat: New Features
+          fix: Bug Fixes
+          revert: Reverts
+          perf: Performance Improvements
+          refactor: Refactors
+          deps: Dependencies
+          docs: Documentation Changes
+          style: Code Style Changes
+          build: Build System
+          ci: Continuous Integration
+          test: Tests
+          chore: Chores
+          other: Other Changes
+        default-commit-type: Other Changes
+        release-name: v1.0.0
+        mention-authors: true
+        mention-new-contributors: true
+        include-compare: true
+        semver: true
