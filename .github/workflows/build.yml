@@ -17,6 +17,8 @@ jobs:
       - name: Changelog
         uses: ardalanamini/auto-changelog@v3
         id: changelog
+        with:
+          release-name: v1.0.0
       - name: Create Release
         uses: softprops/action-gh-release@v1
         env:
