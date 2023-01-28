@@ -3,7 +3,7 @@ name: CI/CD Workflow for walt.id XYZ Kit
 on:
   push:
     branches:
-      - 2-trigger-release-on-pr-mergeclose-p3
+      - 2-trigger-release-on-pr-mergeclose-pr3
   pull_request:
     branches:
       - main
