@@ -16,6 +16,8 @@ jobs:
         run: env
 
   jay:
+    runs-on: ubuntu-latest
+    steps:
       - name: Look Changelog
         uses: jaywcjlove/changelog-generator@v1.3.9
         with:
