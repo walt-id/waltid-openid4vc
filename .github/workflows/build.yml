@@ -9,35 +9,19 @@ on:
       - main
 
 jobs:
-  verify-wrapper:
+  release:
     name: "Verification"
     runs-on: "ubuntu-latest"
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Validate gradle wrapper
-        uses: gradle/wrapper-validation-action@v1
+      - uses: actions/checkout@v3
       - name: Changelog
         uses: ardalanamini/auto-changelog@v3
         id: changelog
-
-  gradle:
-    needs: verify-wrapper
-    name: "Build"
-    strategy:
-      matrix:
-        # os: [ubuntu-latest, macos-latest]
-        os: [ubuntu-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-    - name: Setup java
-      uses: actions/setup-java@v2.1.0
-      with:
-        distribution: 'adopt-hotspot'
-        java-version: '16'
-    - name: Running gradle build
-      uses: eskatos/gradle-command-action@v1.3.3
-      with:
-        arguments: build --no-daemon --info
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          body: |
+            ${{ steps.changelog.outputs.changelog }}
+          prerelease: ${{ steps.changelog.outputs.prerelease }}
