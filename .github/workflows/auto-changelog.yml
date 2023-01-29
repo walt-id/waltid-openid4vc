@@ -2,8 +2,6 @@ name: auto-changelog for walt.id XYZ Kit
 
 on:
   push:
-    branches:
-      - 2-trigger-release-on-pr-mergeclose-pr3
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+*'
 jobs:
