@@ -1,4 +1,4 @@
-name: tag for walt.id XYZ Kit
+name: TAG
 
 on:
   push:
@@ -11,5 +11,5 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: |
-          git tag v3.4.5
+          git tag v3.4.6
           git push --tags
