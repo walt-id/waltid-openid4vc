@@ -4,10 +4,11 @@ on:
   push:
     branches:
       - 2-trigger-release-on-pr-mergeclose-pr3
-
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
 jobs:
   auto-changelog:
-    name: "Verification"
+    name: "Auto Changelog"
     runs-on: "ubuntu-latest"
     steps:
     - name: Changelog
@@ -36,3 +37,11 @@ jobs:
         mention-new-contributors: true
         include-compare: true
         semver: true
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        body: |
+          ${{ steps.changelog.outputs.changelog }}
+        prerelease: ${{ steps.changelog.outputs.prerelease }}
