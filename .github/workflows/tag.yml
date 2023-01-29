@@ -9,4 +9,6 @@ jobs:
   create-tag:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v2      -
       - run: git tag v3.4.5 && git push --tags
