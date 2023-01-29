@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: |
-          git tag `date +"%s"`
+          git tag v9.8.6
           git push --tags
       - name: Changelog
         uses: ardalanamini/auto-changelog@v3
