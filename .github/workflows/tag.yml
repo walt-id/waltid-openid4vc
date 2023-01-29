@@ -11,5 +11,5 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: |
-          git tag v3.4.6
+          git tag $(date + "%s")
           git push --tags
