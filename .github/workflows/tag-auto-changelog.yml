@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: |
-          git tag v3.4.6
+          git tag `date +"%s"`
           git push --tags
       - name: Changelog
         uses: ardalanamini/auto-changelog@v3
@@ -38,7 +38,7 @@ jobs:
           mention-authors: true
           mention-new-contributors: true
           include-compare: true
-          semver: true
+          semver: false
       - name: Create Release
         uses: softprops/action-gh-release@v1
         env:
