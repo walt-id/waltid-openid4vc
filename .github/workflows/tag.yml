@@ -6,9 +6,10 @@ on:
       - 2-trigger-release-on-pr-mergeclose-pr3
 
 jobs:
-  create-tag:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2      -
-      - run: git tag v3.4.5 && git push --tags
+      - uses: actions/checkout@v3
+      - run: |
+          git tag v3.4.5
+          git push --tags
