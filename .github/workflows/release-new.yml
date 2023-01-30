@@ -1,0 +1,56 @@
+name: RELEASE-NEW
+
+on:
+  push:
+    branches:
+      - 2-trigger-release-on-pr-mergeclose
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Calculate release version
+        run: |
+          echo "release_version=1.$(date +'%g%m%d%H%M')" >> $GITHUB_ENV
+      - name: Set version
+        run: |
+          sed -i "s/1.SNAPSHOT/${{ env.release_version }}/g" build.gradle.kts src/main/kotlin/id/walt/Values.kt
+      - run: |
+          git tag ${{ env.release_version }}
+          git push --tags
+      - name: Changelog
+        uses: ardalanamini/auto-changelog@v3
+        id: changelog
+        with:
+          github-token: ${{ github.token }}
+          commit-types: |
+            breaking: Breaking Changes
+            feat: New Features
+            fix: Bug Fixes
+            revert: Reverts
+            perf: Performance Improvements
+            refactor: Refactors
+            deps: Dependencies
+            docs: Documentation Changes
+            style: Code Style Changes
+            build: Build System
+            ci: Continuous Integration
+            test: Tests
+            chore: Chores
+            other: Other Changes
+          default-commit-type: Other Changes
+          release-name: ${{ env.release_version }}
+          mention-authors: true
+          mention-new-contributors: true
+          include-compare: true
+          semver: false
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.release_version }}
+          body: |
+            ${{ steps.changelog.outputs.changelog }}
+          prerelease: ${{ steps.changelog.outputs.prerelease }}
