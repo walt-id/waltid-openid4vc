@@ -1,18 +1,15 @@
-name: TAG & LOG
+name: Changelog
 
 on:
   push:
     branches:
-      - 2-trigger-release-on-pr-mergeclose-pr3-xxx
+      - xxx
 
 jobs:
   tag:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: |
-          git tag v10.8.6
-          git push --tags
       - name: Changelog
         uses: ardalanamini/auto-changelog@v3
         id: changelog

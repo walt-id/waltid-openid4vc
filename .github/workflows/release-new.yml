@@ -3,7 +3,7 @@ name: RELEASE-NEW
 on:
   push:
     branches:
-      - 2-trigger-release-on-pr-mergeclose-pr3
+      - 2-trigger-release-on-pr-mergeclose
 
 jobs:
   release:
