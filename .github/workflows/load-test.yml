@@ -12,7 +12,6 @@ jobs:
   k6_load_test:
     name: k6 Load Test
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v1
@@ -27,5 +26,22 @@ jobs:
         with:
           name: k6-summary-report
           path: summary.json
-
+      - name: Send mail
+        if:  ${{ failure() }}
+        uses: dawidd6/action-send-mail@v2
+        with:
+          # mail server settings
+          server_address: smtp.gmail.com
+          server_port: 465
+          # user credentials
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          # email subject
+          subject: ${{ github.job }} job of ${{ github.repository }} has ${{ job.status }}
+          # email body as text
+          body: ${{ github.job }} job in worflow ${{ github.workflow }} of ${{ github.repository }} has ${{ job.status }}
+          # comma-separated string, send email to
+          to: ahmed@walt.id
+          # from email name
+          from: John Doe
 
