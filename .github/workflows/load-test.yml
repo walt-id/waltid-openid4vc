@@ -6,8 +6,7 @@ on:
   pull_request:
     branches:
       - 1-integrate-k6-with-github-actions-in-project-waltid-xyz-kit
-  schedule:
-    - cron: '*/15 * * * *'
+
 jobs:
   k6_load_test:
     name: k6 Load Test
