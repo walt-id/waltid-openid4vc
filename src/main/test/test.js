@@ -1,10 +1,12 @@
 import http from 'k6/http'
-import { Counter } from 'k6/metrics'
+import { Counter, Trend } from 'k6/metrics'
 import { sleep, check as loadTestingCheck } from "k6";
 import { htmlReport } from "https://raw.githubusercontent.com/benc-uk/k6-reporter/main/dist/bundle.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.1/index.js";
 
 let failedTestCases = new Counter('failedTestCases');
+const issuing_duration = new Trend('issuing_duration');
+
 
 export const options = {
     duration: '1m',
@@ -30,12 +32,14 @@ export default function () {
     }
     const url1 = 'https://signatory.ssikit.walt.id/v1/credentials/issue';
     const url2 = 'https://auditor.ssikit.walt.id/v1/verify';
+   
     let did1 = (http.post(url, JSON.stringify(didData), {
         headers: { 'Content-Type': 'application/json' },
     }))
     let did2 = (http.post(url, JSON.stringify(didData), {
         headers: { 'Content-Type': 'application/json' },
     }))
+   
     let data = {
         "templateId": "OpenBadgeCredential",
         "config": {
@@ -43,9 +47,13 @@ export default function () {
             "subjectDid": did2.body
         }
     }
+
     let res = http.post(url1, JSON.stringify(data), {
         headers: { 'Content-Type': 'application/json' },
-    })
+    });
+    issuing_duration.add(res.timings.waiting);
+    console.log(issuing_duration.name); // waiting_time
+
     let auditorData = {
         "policies":
             [
@@ -58,6 +66,8 @@ export default function () {
                 res.body
             ]
     }
+
+
     let auditRes = http.post(url2, JSON.stringify(auditorData), {
         headers: { 'Content-Type': 'application/json' },
     })
