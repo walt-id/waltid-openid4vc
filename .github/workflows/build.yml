@@ -1,6 +1,13 @@
 name: Build on every push
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - '*'
+      - '*/*'
+      - '**'
+      - '!main'
+
 
 jobs:
   build:

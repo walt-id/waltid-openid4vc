@@ -1,11 +1,7 @@
-name: "Release Old"
+name: "Release"
 
 on:
   workflow_dispatch:
-    inputs:
-      versionName:
-        description: 'Version name  (1.2.3)'
-        required: true
 
 jobs:
   release:
@@ -15,8 +11,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Set release version
-        run:  ./xyzkit set-release-version
+      - name: Calc release version
+        run: |
+          echo "release_version=1.$(date +'%g%m%d%k')" >> $GITHUB_ENV
+      - name: Set version
+        run: |
+          sed -i "s/1.SNAPSHOT/${{ env.release_version }}/g" build.gradle.kts src/main/kotlin/id/walt/Values.kt
 
       - name: Setup java
         uses: actions/setup-java@v2.1.0
@@ -50,18 +50,18 @@ jobs:
         uses: mathieudutour/github-tag-action@v5.5
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          custom_tag: ${{ github.event.inputs.versionName }}
+          custom_tag: ${{ env.release_version }}
 
       - name: Update changelog
         uses: thomaseizinger/keep-a-changelog-new-release@v1
         with:
-          version: ${{ github.event.inputs.versionName }}
+          version: ${{ env.release_version }}
 
       - name: Commit & Push changes
         uses: actions-js/push@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          message: Automatic release commits for ${{ github.event.inputs.versionName }}
+          message: Automatic release commits for ${{ env.release_version }}
           branch: master
 
       - name: Docker Build and Push
@@ -70,13 +70,13 @@ jobs:
           DOCKER_USERNAME: ${{secrets.DOCKER_USERNAME}}
           DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
           DOCKER_FILE: Dockerfile
-          CONTAINER_TAG: waltid/xyzkit:${{ github.event.inputs.versionName }}
+          CONTAINER_TAG: waltid/xyzkit:${{ env.release_version }}
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           body_path: CHANGELOG.md
-          tag_name: ${{ github.event.inputs.versionName }}
+          tag_name: ${{ env.release_version }}
           files: |
             LICENSE.txt
             build/libs/*.jar
