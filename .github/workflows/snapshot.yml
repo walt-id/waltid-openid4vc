@@ -3,7 +3,7 @@ name: Snapshot release workflow for walt.id XYZ Kit
 on:
   push:
     branches:
-      - XXmain
+      - xxx
 
 jobs:
   verify-wrapper:

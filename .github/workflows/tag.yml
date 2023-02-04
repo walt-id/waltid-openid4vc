@@ -1,16 +1,18 @@
-name: Build on every push
+name: TAG
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - xxx
 
 jobs:
   build:
-    name: "Build"
-    runs-on: "ubuntu-latest"
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: Calculate release version
         run: |
-          echo "release_version=1.$(date +'%g%m%d%H%M').$(echo ${{ github.ref_name }} | tr / -)" >> $GITHUB_ENV
+          echo "release_version=1.$(date +'%g%m%d')" >> $GITHUB_ENV
       - name: Set version
         run: |
           sed -i "s/1.SNAPSHOT/${{ env.release_version }}/g" build.gradle.kts src/main/kotlin/id/walt/Values.kt
