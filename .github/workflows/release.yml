@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Calculate release version
         run: |
-          echo "release_version=1.$(date +'%g%m%d%H%M')" >> $GITHUB_ENV
+          echo "release_version=v1.$(date +'%g%m%d%H%M')" >> $GITHUB_ENV
       - name: Set version
         run: |
           sed -i "s/1.SNAPSHOT/${{ env.release_version }}/g" build.gradle.kts src/main/kotlin/id/walt/Values.kt
@@ -60,7 +60,7 @@ jobs:
           mention-authors: true
           mention-new-contributors: true
           include-compare: true
-          semver: false
+          semver: true
       - name: Create Release
         uses: softprops/action-gh-release@v1
         env:
