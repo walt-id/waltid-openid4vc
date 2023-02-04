@@ -22,6 +22,8 @@ jobs:
         with:
           distribution: 'adopt-hotspot'
           java-version: '16'
+      - name: Gradle wrapper validation
+        uses: gradle/wrapper-validation-action@v1
       - name: Running gradle build
         uses: eskatos/gradle-command-action@v1.3.3
         env:
