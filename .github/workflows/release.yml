@@ -20,6 +20,15 @@ jobs:
       - run: |
           git tag v${{ env.release_version }}
           git push --tags
+      - name: Setup cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
       - name: Gradle wrapper validation
         uses: gradle/wrapper-validation-action@v1
       - name: Running gradle build
