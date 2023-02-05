@@ -13,12 +13,12 @@ jobs:
       - uses: actions/checkout@v3
       - name: Calculate release version
         run: |
-          echo "release_version=v1.$(date +'%g%m%d%H%M').0" >> $GITHUB_ENV
+          echo "release_version=1.$(date +'%g%m%d%H%M').0" >> $GITHUB_ENV
       - name: Set version
         run: |
           sed -i "s/1.SNAPSHOT/${{ env.release_version }}/g" build.gradle.kts src/main/kotlin/id/walt/Values.kt
       - run: |
-          git tag ${{ env.release_version }}
+          git tag v${{ env.release_version }}
           git push --tags
       - name: Gradle wrapper validation
         uses: gradle/wrapper-validation-action@v1
@@ -29,7 +29,7 @@ jobs:
           MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
         with:
           arguments: build publish --no-daemon
-      - name: Docker Build and Push SNAPSHOT
+      - name: Docker build and push
         uses: philpotisk/github-action-docker-build-push@master
         env:
           DOCKER_USERNAME: ${{secrets.DOCKER_USERNAME}}
@@ -67,7 +67,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.release_version }}
+          tag_name: v${{ env.release_version }}
           body: |
             ${{ steps.changelog.outputs.changelog }}
           prerelease: ${{ steps.changelog.outputs.prerelease }}
