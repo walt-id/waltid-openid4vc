@@ -12,6 +12,10 @@ jobs:
     name: Validate PR title
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: wagoid/commitlint-github-action@v5
       - name: semantic-pull-request
         id: lint_pr_title
         uses: amannn/action-semantic-pull-request@v5.2.0
