@@ -48,6 +48,8 @@ jobs:
             Details:
             
             ```
+            ${{ toJSON(fromJSON(steps.lint_commit_messages.outputs.results)) }}
+
             ${{ steps.lint_pr_title.outputs.error_message }}
             ```
 
