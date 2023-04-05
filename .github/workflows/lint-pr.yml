@@ -34,24 +34,24 @@ jobs:
             Hey there and thank you for opening this pull request! 👋🏼
             
             Some or all of your commit messages do not seem to follow the [Conventional Commits specification](https://www.conventionalcommits.org/en/v1.0.0/).
-            To allow the merge of this pull request, we require that at least one commit message OR the PR title follow that convention.
+            To allow the merge of this pull request, we require that at least one commit message <b>or</b> the PR title follow that convention.
             
-            You have the following possibilities to proceed with this PR:
+            You have the <b>following possibilities to proceed</b> with this PR:
             1) Make sure at least one commit message complies with the [Conventional Commits specification](https://www.conventionalcommits.org/en/v1.0.0/).
                Note, if not all messages comply, the merge will be allowed, but you will still see this warning.
             2) Update the title of this pull request to comply with the [Conventional Commits specification](https://www.conventionalcommits.org/en/v1.0.0/).
             
-            Further information:
+            <b>Further information:</b>
             The commit messages and PR title will be parsed according to the [Conventional Commits specification](https://www.conventionalcommits.org/en/v1.0.0/), to automatically populate the release notes for the next official release.
-            Therefore, make sure the commit messages and PR title contain the necessary and relevant information describing the changes of this pull request.
+            Therefore, make sure the commit messages <b>or<b/> PR title contain the necessary and relevant information describing the changes of this pull request.
 
-            Commit messages details:
+            <b>Commit message details:</b>
             
             ```
             ${{ toJSON(fromJSON(steps.lint_commit_messages.outputs.results)) }}
             ```
 
-            PR title details:
+            <b>PR title details:</b>
             ```
             ${{ steps.lint_pr_title.outputs.error_message }}
             ```
