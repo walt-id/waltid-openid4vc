@@ -16,6 +16,8 @@ jobs:
         with:
           fetch-depth: 0
       - uses: walt-id/commitlint-github-action@v4
+        with:
+          noMerges: true
         id: lint_commit_messages
         continue-on-error: true
       - name: semantic-pull-request
