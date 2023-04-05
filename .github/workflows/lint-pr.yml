@@ -45,11 +45,14 @@ jobs:
             The commit messages and PR title will be parsed according to the [Conventional Commits specification](https://www.conventionalcommits.org/en/v1.0.0/), to automatically populate the release notes for the next official release.
             Therefore, make sure the commit messages and PR title contain the necessary and relevant information describing the changes of this pull request.
 
-            Details:
+            Commit messages details:
             
             ```
             ${{ toJSON(fromJSON(steps.lint_commit_messages.outputs.results)) }}
+            ```
 
+            PR title details:
+            ```
             ${{ steps.lint_pr_title.outputs.error_message }}
             ```
 
