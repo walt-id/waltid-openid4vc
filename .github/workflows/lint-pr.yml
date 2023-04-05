@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - uses: walt-id/commitlint-github-action@v3
+      - uses: walt-id/commitlint-github-action@v4
         id: lint_commit_messages
         continue-on-error: true
       - name: semantic-pull-request
