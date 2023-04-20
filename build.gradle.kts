@@ -133,21 +133,6 @@ tasks.named<CreateStartScripts>("startScripts") {
     }
 }
 
-val fatJar = task("fatJar", type = Jar::class) {
-    group = "build"
-
-    archiveBaseName.set("${project.name}-with-dependencies")
-
-    manifest {
-        attributes["Implementation-Title"] = "Gradle Jar Bundling"
-        attributes["Implementation-Version"] = archiveVersion.get()
-        attributes["Main-Class"] = "id.walt.MainCliKt"
-    }
-
-    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
-    with(tasks.jar.get() as CopySpec)
-}
-
 application {
     mainClass.set("id.walt.MainCliKt")
     val isDevelopment: Boolean = project.ext.has("development")
