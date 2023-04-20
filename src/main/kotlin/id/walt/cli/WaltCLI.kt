@@ -6,7 +6,15 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.versionOption
 import id.walt.Values
+import id.walt.config.ConfigManager
+import id.walt.config.WebConfig
+import id.walt.db.Db
+import id.walt.web.HelloApi.helloApi
+import id.walt.web.plugins.*
 import io.github.oshai.KotlinLogging
+import io.ktor.server.application.*
+import io.ktor.server.cio.*
+import io.ktor.server.engine.*
 
 data class CliConfig(var dataDir: String, val properties: MutableMap<String, String>, var verbose: Boolean)
 
@@ -71,6 +79,16 @@ object WaltCLI {
 
             args.forEach { arg -> println(arg) }
 
+            log.info("Reading configurations...")
+            ConfigManager.loadConfigs(args)
+
+            Db.start()
+
+            val webConfig = ConfigManager.getConfig<WebConfig>()
+            log.info("Starting web server (binding to ${webConfig.webHost}, listening on port ${webConfig.webPort})...")
+            embeddedServer(CIO, port = webConfig.webPort, host = webConfig.webHost, module = Application::module)
+                .start(wait = true)
+
         } catch (e: Exception) {
             println(e.message)
 
@@ -78,4 +96,18 @@ object WaltCLI {
                 e.printStackTrace()
         }
     }
+}
+
+fun Application.configurePlugins() {
+    configureHTTP()
+    configureMonitoring()
+    configureStatusPages()
+    configureSerialization()
+    configureRouting()
+    configureOpenApi()
+}
+
+fun Application.module() {
+    configurePlugins()
+    helloApi()
 }

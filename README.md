@@ -28,6 +28,8 @@
 Kotlin starter project with the following features:
 
 **CODE**
+- REST API via *Ktor*
+- DB setup via *Exposed*
 - CLI tool via *clikt*
 - Configuration handling via *hoplite*
 - Unit tests via *kotest*
