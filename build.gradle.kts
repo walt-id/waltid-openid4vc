@@ -5,7 +5,7 @@ import com.github.jk1.license.filter.LicenseBundleNormalizer
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.7.10"
+    kotlin("jvm") version "1.8.10"
     kotlin("plugin.serialization") version "1.6.10"
     id("org.owasp.dependencycheck") version "6.5.3"
     id("com.github.jk1.dependency-license-report") version "2.0"
@@ -87,16 +87,22 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+
+    // Use the following condition to optionally run the integration tests:
+    // > gradle build -PrunIntegrationTests
+    if (!project.hasProperty("runIntegrationTests")) {
+        exclude("id/walt/test/integration/**")
+    }
 }
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(16))
+        languageVersion.set(JavaLanguageVersion.of(17))
     }
 }
 
 tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "16"
+    kotlinOptions.jvmTarget = "17"
 }
 
 tasks.named<CreateStartScripts>("startScripts") {
