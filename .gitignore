@@ -20,6 +20,8 @@ gradle-app.setting
 **/build/
 gradle.properties
 
+.vscode
+
 # WaltID SSI-Kit
 keys/
 *.db

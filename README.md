@@ -25,7 +25,18 @@
 
 ## Getting Started
 
-This project is just for testing the project layout only.
+Kotlin starter project with the following features:
+
+**CODE**
+- CLI tool via *clikt*
+- Configuration handling via *hoplite*
+
+**CI/CD**
+- Dockerfile
+- Kubernetes deployment specs
+- Build script `xyzkit.sh`
+- GitHub Action for automatically releasing the project once a PR is merged with the main-line
+
 
 ## License
 
