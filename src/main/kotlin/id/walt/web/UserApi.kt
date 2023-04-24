@@ -89,7 +89,6 @@ object UserApi {
                 }
             }) {
                 val userRequest = call.receive<UserData>()
-                println(userRequest)
                 transaction {
                     Users.insertAndGetId {
                         it[email] = userRequest.email
@@ -110,7 +109,6 @@ object UserApi {
                     }
                 }) {
                     val id = UUID.fromString(context.parameters.get("id"))
-                    println(id)
                     transaction {
                         Users.deleteWhere { Users.id eq id }
                     }
