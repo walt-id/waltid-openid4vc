@@ -9,7 +9,7 @@ import id.walt.Values
 import id.walt.config.ConfigManager
 import id.walt.config.WebConfig
 import id.walt.db.Db
-import id.walt.web.HelloApi.helloApi
+import id.walt.web.UserApi.helloApi
 import id.walt.web.plugins.*
 import io.github.oshai.KotlinLogging
 import io.ktor.server.application.*

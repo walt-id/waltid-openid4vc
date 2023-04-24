@@ -9,16 +9,16 @@ import io.ktor.server.plugins.*
 import kotlin.reflect.KClass
 import kotlin.reflect.jvm.jvmName
 
-interface WalletConfig
+interface BaseConfig
 
 object ConfigManager {
 
     val log = KotlinLogging.logger { }
 
-    val registeredConfigurations = ArrayList<Pair<String, KClass<out WalletConfig>>>()
-    val loadedConfigurations = HashMap<String, WalletConfig>()
+    val registeredConfigurations = ArrayList<Pair<String, KClass<out BaseConfig>>>()
+    val loadedConfigurations = HashMap<String, BaseConfig>()
 
-    private fun loadConfig(config: Pair<String, KClass<out WalletConfig>>, args: Array<String>) {
+    private fun loadConfig(config: Pair<String, KClass<out BaseConfig>>, args: Array<String>) {
         val id = config.first
         log.debug { "Loading configuration: \"$id\"..." }
 
@@ -34,11 +34,11 @@ object ConfigManager {
         }
     }
 
-    inline fun <reified ConfigClass : WalletConfig> getConfigIdentifier(): String =
+    inline fun <reified ConfigClass : BaseConfig> getConfigIdentifier(): String =
         registeredConfigurations.firstOrNull { it.second == ConfigClass::class }?.first
             ?: throw IllegalArgumentException("No such configuration registered: \"${ConfigClass::class.jvmName}\"!")
 
-    inline fun <reified ConfigClass : WalletConfig> getConfig(): ConfigClass =
+    inline fun <reified ConfigClass : BaseConfig> getConfig(): ConfigClass =
         getConfigIdentifier<ConfigClass>().let { configKey ->
             (loadedConfigurations[configKey]
                 ?: throw NotFoundException("No loaded configuration: \"$configKey\"")).let { loadedConfig ->
@@ -48,7 +48,7 @@ object ConfigManager {
         }
 
 
-    private fun registerConfig(name: String, config: KClass<out WalletConfig>) {
+    private fun registerConfig(name: String, config: KClass<out BaseConfig>) {
         if (registeredConfigurations.any { it.first == name }) throw IllegalArgumentException("A configuration with the name \"$name\" already exists!")
 
         registeredConfigurations.add(Pair(name, config))

@@ -1,23 +1,25 @@
 package id.walt.web
 
+import id.walt.db.models.Users
 import io.github.smiley4.ktorswaggerui.dsl.delete
 import io.github.smiley4.ktorswaggerui.dsl.get
 import io.github.smiley4.ktorswaggerui.dsl.put
 import io.github.smiley4.ktorswaggerui.dsl.route
 import io.ktor.http.*
 import io.ktor.server.application.*
-import io.ktor.server.auth.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.json.JsonObject
+import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.selectAll
 
-object HelloApi {
+object UserApi {
 
     private fun Application.walletRoute(build: Route.() -> Unit) {
         routing {
          //   authenticate("authenticated") {
                 route("api/xyz", {
-                    tags = listOf("wallet")
+                    tags = listOf("user")
                 }) {
                     build.invoke(this)
                 }
@@ -26,7 +28,7 @@ object HelloApi {
     }
 
     fun Application.helloApi() = walletRoute {
-        route("hello") {
+        route("user") {
             get({
                 summary = "List users"
                 response {
@@ -36,14 +38,14 @@ object HelloApi {
                     }
                 }
             }) {
-                context.respond("")
+                context.respond(Users.selectAll())
             }
 
             route("{id}") {
                 get({
                     summary = "Load a user"
                 }) {
-                    TODO()
+                    val id = context.parameters.get("id")
                 }
             }
 
