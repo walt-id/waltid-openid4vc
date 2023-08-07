@@ -143,10 +143,10 @@ publishing {
     publications {
         create<MavenPublication>("mavenJava") {
             pom {
-                name.set("walt.id XYZ Kit")
+                name.set("walt.id OpenID4VC")
                 description.set(
                     """
-                    Kotlin/Java library for XYZ core services
+                    Kotlin/Java library for OpenID4VC
                     """.trimIndent()
                 )
                 url.set("https://walt.id")
