@@ -2,10 +2,10 @@ name: load testing
 on:
   push:
     branches:
-      - 1-integrate-k6-with-github-actions-in-project-waltid-xyz-kit
+      - 1-integrate-k6-with-github-actions-in-project-waltid-openid4vc
   pull_request:
     branches:
-      - 1-integrate-k6-with-github-actions-in-project-waltid-xyz-kit
+      - 1-integrate-k6-with-github-actions-in-project-waltid-openid4vc
 #  schedule:
 #   - cron: "*/5 * * * *"
 jobs:

@@ -47,7 +47,7 @@ jobs:
         uses: docker/build-push-action@v4.0.0
         with:
           push: true
-          tags: waltid/xyzkit:latest, waltid/xyzkit:${{ env.release_version }}
+          tags: waltid/openid4vc:latest, waltid/openid4vc:${{ env.release_version }}
       - name: Changelog
         uses: ardalanamini/auto-changelog@v3
         id: changelog

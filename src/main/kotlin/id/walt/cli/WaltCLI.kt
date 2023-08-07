@@ -28,9 +28,9 @@ class Walt : CliktCommand(
         
         Example commands are:
         
-        ./xyzkit.sh -h
+        ./openid4vc.sh -h
 
-        docker run -itv ${'$'}(pwd)/data:/app/data waltid/xyzkit -h
+        docker run -itv ${'$'}(pwd)/data:/app/data waltid/openid4vc -h
         
         """
 ) {

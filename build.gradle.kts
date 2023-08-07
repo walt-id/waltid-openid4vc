@@ -176,6 +176,6 @@ publishing {
 }
 
 licenseReport {
-    renderers = arrayOf<ReportRenderer>(InventoryHtmlReportRenderer("xyzkit-licenses-report.html","XYZ Kit"))
+    renderers = arrayOf<ReportRenderer>(InventoryHtmlReportRenderer("openid4vc-licenses-report.html","OpenID4VC"))
     filters = arrayOf<DependencyFilter>(LicenseBundleNormalizer())
 }

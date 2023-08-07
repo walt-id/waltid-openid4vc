@@ -21,13 +21,13 @@ RUN apt-get update && apt-get upgrade --yes
 FROM openjdk-gradle AS walt-build
 COPY ./ /opt
 RUN ./gradlew clean build
-RUN tar xf /opt/build/distributions/waltid-xyzkit-1.SNAPSHOT.tar -C /opt
+RUN tar xf /opt/build/distributions/waltid-openid4vc-1.SNAPSHOT.tar -C /opt
 
 FROM openjdk:17-slim-buster
 
 RUN mkdir /app
-COPY --from=walt-build /opt/waltid-xyzkit-* /app/
+COPY --from=walt-build /opt/waltid-openid4vc-* /app/
 
 WORKDIR /app
 
-ENTRYPOINT ["/app/bin/waltid-xyzkit"]
+ENTRYPOINT ["/app/bin/waltid-openid4vc"]
