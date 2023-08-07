@@ -1,18 +1,18 @@
 <div align="center">
- <h1>XYZ Kit</h1>
+ <h1>OpenID4VC - Kotlin multiplatform library</h1>
  <span>by </span><a href="https://walt.id">walt.id</a>
- <p>...<p>
+ <p>Multiplatform library implementing the data models and protocols of the <a href="https://openid.net/sg/openid4vc/">OpenID for Verifiable Credentials</a> specifications, including <a href="https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html">OID4VCI</a>, <a href="https://openid.net/specs/openid-4-verifiable-presentations-1_0.html">OID4VP</a> and <a href="https://openid.net/specs/openid-connect-self-issued-v2-1_0.html">SIOPv2</a>.<p>
  
  test push 6
 
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=walt-id_waltid-xyzkit&metric=security_rating)](https://sonarcloud.io/dashboard?id=walt-id_waltid-xyzkit)
-[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=walt-id_waltid-xyzkit&metric=vulnerabilities)](https://sonarcloud.io/dashboard?id=walt-id_waltid-xyzkit)
-[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=walt-id_waltid-xyzkit&metric=reliability_rating)](https://sonarcloud.io/dashboard?id=walt-id_waltid-xyzkit)
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=walt-id_waltid-xyzkit&metric=sqale_rating)](https://sonarcloud.io/dashboard?id=walt-id_waltid-xyzkit)
-[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=walt-id_waltid-xyzkit&metric=ncloc)](https://sonarcloud.io/dashboard?id=walt-id_waltid-xyzkit)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=walt-id_waltid-xyzkit-examples&metric=alert_status)](https://sonarcloud.io/dashboard?id=walt-id_waltid-xyzkit)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=walt-id_waltid-openid4vc&metric=security_rating)](https://sonarcloud.io/dashboard?id=walt-id_waltid-openid4vc)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=walt-id_waltid-openid4vc&metric=vulnerabilities)](https://sonarcloud.io/dashboard?id=walt-id_waltid-openid4vc)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=walt-id_waltid-openid4vc&metric=reliability_rating)](https://sonarcloud.io/dashboard?id=walt-id_waltid-openid4vc)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=walt-id_waltid-openid4vc&metric=sqale_rating)](https://sonarcloud.io/dashboard?id=walt-id_waltid-openid4vc)
+[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=walt-id_waltid-openid4vc&metric=ncloc)](https://sonarcloud.io/dashboard?id=walt-id_waltid-openid4vc)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=walt-id_waltid-openid4vc-examples&metric=alert_status)](https://sonarcloud.io/dashboard?id=walt-id_waltid-openid4vc)
 
-[![CI/CD Workflow for walt.id XYZ Kit](https://github.com/walt-id/waltid-xyzkit/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/walt-id/waltid-xyzkit/actions/workflows/build.yml)
+[![CI/CD Workflow for walt.id OpenID4VC](https://github.com/walt-id/waltid-openid4vc/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/walt-id/waltid-openid4vc/actions/workflows/build.yml)
 <a href="https://walt.id/community">
 <img src="https://img.shields.io/badge/Join-The Community-blue.svg?style=flat" alt="Join community!" />
 </a>
@@ -37,10 +37,10 @@ Kotlin starter project with the following features:
 **CI/CD**
 - Dockerfile
 - Kubernetes deployment specs
-- Build script `xyzkit.sh`
+- Build script `openid4vc.sh`
 - GitHub Action for automatically releasing the project once a PR is merged with the main-line
 
 
 ## License
 
-Licensed under the [Apache License, Version 2.0](https://github.com/walt-id/waltid-xyzkit/blob/master/LICENSE)
+Licensed under the [Apache License, Version 2.0](https://github.com/walt-id/waltid-openid4vc/blob/master/LICENSE)
