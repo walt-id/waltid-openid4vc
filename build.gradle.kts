@@ -75,6 +75,8 @@ kotlin {
                 implementation("io.kotest:kotest-runner-junit5:5.5.5")
                 implementation("io.kotest:kotest-assertions-core:5.5.5")
                 implementation("io.kotest:kotest-assertions-json:5.5.5")
+
+                implementation("com.nimbusds:oauth2-oidc-sdk:10.7")
             }
         }
         val jsMain by getting {
