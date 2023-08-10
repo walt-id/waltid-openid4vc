@@ -1,9 +1,39 @@
 package id.walt.oid4vc.ci
 
-import id.walt.oid4vc.IJsonObject
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.*
+
+/*
+@context: [...],      // json-ld only
+doctype: "..."        // mDL only
+types: [...],
+credentialSubject: {  // vc only
+  prop1: {
+    mandatory: bool,
+    value_type: "...",
+    display: {
+      name: "...",
+      locale: "..."
+    }
+  },
+  prop2: {...}
+},
+claims: {           // mDL only
+  "namespace...": {
+    prop1: {
+      mandatory: bool,
+      value_type: "...",
+      display: {
+        name: "...",
+        locale: "..."
+      }
+    },
+    prop2: {...}
+  }
+},
+order: [...]
+
+ */
+
 
 /**
  * Objects that appear in the credentials_supported metadata parameter.
@@ -14,19 +44,18 @@ import kotlinx.serialization.json.JsonPrimitive
  * @param cryptographicSuitesSupported OPTIONAL. Array of case sensitive strings that identify the cryptographic suites that are supported for the cryptographic_binding_methods_supported. Cryptosuites for Credentials in jwt_vc format should use algorithm names defined in IANA JOSE Algorithms Registry. Cryptosuites for Credentials in ldp_vc format should use signature suites names defined in Linked Data Cryptographic Suite Registry.
  * @param display OPTIONAL. An array of objects, where each object contains the display properties of the supported credential for a certain language. Below is a non-exhaustive list of parameters that MAY be included. Note that the display name of the supported credential is obtained from display.name and individual claim names from claims.display.name values.
  */
-data class CredentialsSupported(
+@Serializable
+data class CredentialsSupported (
   val format: String,
   val id: String? = null,
-  val cryptographicBindingMethodsSupported: Set<String>? = null,
-  val cryptographicSuitesSupported: Set<String>? = null,
-  val display: List<CredentialDisplayProperties>? = null
-): IJsonObject {
-  override fun toJsonObject() = JsonObject (buildMap {
-    put("format", JsonPrimitive(format))
-    id?.let { put("id", JsonPrimitive(it)) }
-    cryptographicBindingMethodsSupported?.let { put("cryptographic_binding_methods_supported", JsonArray(it.map { method -> JsonPrimitive(method) })) }
-    cryptographicSuitesSupported?.let { put("cryptographic_suites_supported", JsonArray(it.map { suite -> JsonPrimitive(suite) })) }
-    display?.let { put("display", JsonArray(it.map { item -> item.toJsonObject() })) }
-  })
+  @SerialName("cryptographic_binding_methods_supported") val cryptographicBindingMethodsSupported: Set<String>? = null,
+  @SerialName("cryptographic_suites_supported") val cryptographicSuitesSupported: Set<String>? = null,
+  val display: List<DisplayProperties>? = null,
+  @SerialName("@context") val context: List<String>? = null,
+  val types: List<String>? = null,
+  @SerialName("doctype") val docType: String? = null,
+  val credentialSubject: Map<String, ClaimDescriptor>? = null,
+  val claims: Map<String, Map<String, ClaimDescriptor>>? = null,
+  val order: List<String>? = null
+)
 
-}
