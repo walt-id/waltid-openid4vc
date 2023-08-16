@@ -1,5 +1,6 @@
 package id.walt.oid4vc
 
+import id.walt.oid4vc.data.OpenIDProviderMetadata
 import kotlinx.serialization.Serializable
 
 @Serializable

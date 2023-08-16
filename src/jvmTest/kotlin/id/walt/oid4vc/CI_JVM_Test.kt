@@ -1,10 +1,16 @@
 package id.walt.oid4vc
 
-import id.walt.oid4vc.ci.*
+import id.walt.oid4vc.data.*
 import io.kotest.assertions.json.shouldMatchJson
 import io.kotest.core.spec.style.AnnotationSpec
 import io.kotest.matchers.shouldBe
-import kotlinx.serialization.decodeFromString
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.request.*
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -16,18 +22,44 @@ class CI_JVM_Test: AnnotationSpec() {
     metadata = OpenIDProviderMetadata(
       authorizationEndpoint = "https://localhost/oidc",
       credentialsSupported = listOf(
-        CredentialsSupported("jwt_vc_json", "jwt_vc_json_fmt", setOf("did"), setOf("ES256K"),
+        CredentialSupported("jwt_vc_json", "jwt_vc_json_fmt", setOf("did"), setOf("ES256K"),
           listOf(DisplayProperties(
             "University Credential",
             "en-US",
             LogoProperties("https://exampleuniversity.com/public/logo.png", "a square logo of a university"),
             backgroundColor = "#12107c", textColor = "#FFFFFF"
           )),
-          types = listOf("VerifiableCredential", "UniversityDegreeCredential")
+          types = listOf("VerifiableCredential", "UniversityDegreeCredential"),
+          credentialSubject = mapOf(
+            "name" to ClaimDescriptor(
+              mandatory = false,
+              display = listOf(DisplayProperties("Full Name")),
+              nestedClaims = mapOf(
+              "firstName" to ClaimDescriptor(valueType = "string", display = listOf(DisplayProperties("First Name"))),
+              "lastName" to ClaimDescriptor(valueType = "string", display = listOf(DisplayProperties("Last Name")))
+            ))
+          )
+        ),
+        CredentialSupported("ldp_vc", "ldp_vc_1", setOf("did"), setOf("ES256K"),
+          listOf(DisplayProperties("Verifiable ID")),
+          types = listOf("VerifiableCredential", "VerifiableId"),
+          context = listOf(
+            JsonPrimitive("https://www.w3.org/2018/credentials/v1"),
+            JsonObject(mapOf("@version" to JsonPrimitive(1.1))))
         )
       )
     )
   )
+  val ktorClient = HttpClient(CIO) {
+    install(ContentNegotiation) {
+      json()
+    }
+  }
+
+  @BeforeAll
+  fun init() {
+    CITestProvider.start()
+  }
 
   @Test
   fun testCredentialSupportedSerialization() {
@@ -83,14 +115,25 @@ class CI_JVM_Test: AnnotationSpec() {
         "        }\n" +
         "    }\n" +
         "}"
-    val credentialSupported = Json.decodeFromString<CredentialsSupported>(credentialSupportedJson)
+    val credentialSupported = Json.decodeFromString<CredentialSupported>(credentialSupportedJson)
     credentialSupported.format shouldBe "jwt_vc_json"
     Json.encodeToString(credentialSupported) shouldMatchJson credentialSupportedJson
   }
 
   @Test
   fun testOIDProviderMetadata() {
-    println(Json.encodeToString(oid4vciProvider.metadata))
+    val metadataJson = Json.encodeToString(oid4vciProvider.metadata)
+    println(metadataJson)
+    val metadataParsed = Json.decodeFromString<OpenIDProviderMetadata>(metadataJson)
+    Json.encodeToString(metadataParsed) shouldMatchJson metadataJson
+  }
+
+  @Test
+  suspend fun testFetchAndParseMetadata() {
+    val response = ktorClient.get("http://localhost:8000/.well-known/openid-configuration")
+    response.status shouldBe HttpStatusCode.OK
+    val metadata: OpenIDProviderMetadata = response.body()
+    Json.encodeToString(metadata) shouldMatchJson Json.encodeToString(CITestProvider.openidIssuerMetadata)
   }
 
   @Test

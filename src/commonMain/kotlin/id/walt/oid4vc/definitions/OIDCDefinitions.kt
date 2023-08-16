@@ -1,4 +1,4 @@
-package id.walt.oid4vc
+package id.walt.oid4vc.definitions
 
 const val AUTHORIZATION_ENDPOINT = "authorization_endpoint"
 const val TOKEN_ENDPOINT = "token_endpoint"
@@ -42,3 +42,5 @@ const val REQUEST_URI_PARAMETER_SUPPORTED = "request_uri_parameter_supported"
 const val REQUIRE_REQUEST_URI_REGISTRATION = "require_request_uri_registration"
 const val OP_POLICY_URI = "op_policy_uri"
 const val OP_TOS_URI = "op_tos_uri"
+
+const val OPENID_CREDENTIAL_AUTHORIZATION_TYPE = "openid_credential"

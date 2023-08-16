@@ -46,6 +46,7 @@ kotlin {
         else -> throw GradleException("Host OS is not supported in Kotlin/Native.")
     }
     val kryptoVersion = "4.0.1"
+    val ktor_version = "2.3.3"
 
 
     sourceSets {
@@ -67,7 +68,6 @@ kotlin {
         }
         val jvmMain by getting {
             dependencies {
-                implementation("com.nimbusds:nimbus-jose-jwt:9.30.2")
             }
         }
         val jvmTest by getting {
@@ -79,6 +79,16 @@ kotlin {
                 implementation("io.kotest:kotest-assertions-json:5.5.5")
 
                 implementation("com.nimbusds:oauth2-oidc-sdk:10.7")
+
+                implementation("io.ktor:ktor-server-core-jvm:$ktor_version")
+                implementation("io.ktor:ktor-server-netty-jvm:$ktor_version")
+                implementation("io.ktor:ktor-server-status-pages-jvm:$ktor_version")
+                implementation("io.ktor:ktor-server-default-headers-jvm:$ktor_version")
+                implementation("io.ktor:ktor-server-content-negotiation:$ktor_version")
+                implementation("io.ktor:ktor-client-core:$ktor_version")
+                implementation("io.ktor:ktor-client-cio:$ktor_version")
+                implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
+                implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
             }
         }
         val jsMain by getting {
