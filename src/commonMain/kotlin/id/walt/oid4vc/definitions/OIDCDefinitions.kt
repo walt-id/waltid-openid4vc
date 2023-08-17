@@ -44,3 +44,4 @@ const val OP_POLICY_URI = "op_policy_uri"
 const val OP_TOS_URI = "op_tos_uri"
 
 const val OPENID_CREDENTIAL_AUTHORIZATION_TYPE = "openid_credential"
+const val RESPONSE_TYPE_CODE = "code"

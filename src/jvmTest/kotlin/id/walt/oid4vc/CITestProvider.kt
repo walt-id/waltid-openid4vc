@@ -9,8 +9,10 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.util.*
 
 object CITestProvider {
   val openidIssuerMetadata = OpenIDProviderMetadata(
@@ -40,6 +42,10 @@ object CITestProvider {
       routing {
         get("/.well-known/openid-configuration") {
           call.respond(openidIssuerMetadata)
+        }
+        post("/par") {
+          call.request.headers.toMap()
+          val params = call.receiveParameters().toMap()
         }
       }
     }.start()

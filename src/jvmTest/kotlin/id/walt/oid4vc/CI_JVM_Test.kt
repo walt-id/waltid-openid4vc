@@ -11,8 +11,6 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -34,9 +32,9 @@ class CI_JVM_Test: AnnotationSpec() {
             "name" to ClaimDescriptor(
               mandatory = false,
               display = listOf(DisplayProperties("Full Name")),
-              nestedClaims = mapOf(
-              "firstName" to ClaimDescriptor(valueType = "string", display = listOf(DisplayProperties("First Name"))),
-              "lastName" to ClaimDescriptor(valueType = "string", display = listOf(DisplayProperties("Last Name")))
+              customParameters = mapOf(
+              "firstName" to ClaimDescriptor(valueType = "string", display = listOf(DisplayProperties("First Name"))).toJSON(),
+              "lastName" to ClaimDescriptor(valueType = "string", display = listOf(DisplayProperties("Last Name"))).toJSON()
             ))
           )
         ),
@@ -95,7 +93,7 @@ class CI_JVM_Test: AnnotationSpec() {
         "                    \"name\": \"Given Name\",\n" +
         "                    \"locale\": \"en-US\"\n" +
         "                }\n" +
-        "            ]\n" +
+        "            ]\n, \"nested\": {}" +
         "        },\n" +
         "        \"last_name\": {\n" +
         "            \"display\": [\n" +
@@ -115,17 +113,17 @@ class CI_JVM_Test: AnnotationSpec() {
         "        }\n" +
         "    }\n" +
         "}"
-    val credentialSupported = Json.decodeFromString<CredentialSupported>(credentialSupportedJson)
+    val credentialSupported = CredentialSupported.fromJSONString(credentialSupportedJson)
     credentialSupported.format shouldBe "jwt_vc_json"
-    Json.encodeToString(credentialSupported) shouldMatchJson credentialSupportedJson
+    credentialSupported.toJSONString() shouldMatchJson credentialSupportedJson
   }
 
   @Test
   fun testOIDProviderMetadata() {
-    val metadataJson = Json.encodeToString(oid4vciProvider.metadata)
+    val metadataJson = oid4vciProvider.metadata.toJSONString()
     println(metadataJson)
-    val metadataParsed = Json.decodeFromString<OpenIDProviderMetadata>(metadataJson)
-    Json.encodeToString(metadataParsed) shouldMatchJson metadataJson
+    val metadataParsed = OpenIDProviderMetadata.fromJSONString(metadataJson)
+    metadataParsed.toJSONString() shouldMatchJson metadataJson
   }
 
   @Test
@@ -133,7 +131,7 @@ class CI_JVM_Test: AnnotationSpec() {
     val response = ktorClient.get("http://localhost:8000/.well-known/openid-configuration")
     response.status shouldBe HttpStatusCode.OK
     val metadata: OpenIDProviderMetadata = response.body()
-    Json.encodeToString(metadata) shouldMatchJson Json.encodeToString(CITestProvider.openidIssuerMetadata)
+    metadata.toJSONString() shouldMatchJson CITestProvider.openidIssuerMetadata.toJSONString()
   }
 
   @Test
