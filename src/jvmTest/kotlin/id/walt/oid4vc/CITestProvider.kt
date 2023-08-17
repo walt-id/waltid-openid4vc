@@ -4,6 +4,7 @@ import id.walt.oid4vc.data.CredentialSupported
 import id.walt.oid4vc.data.GrantType
 import id.walt.oid4vc.data.OpenIDProviderMetadata
 import id.walt.oid4vc.data.SubjectType
+import id.walt.oid4vc.requests.AuthorizationRequest
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -44,8 +45,7 @@ object CITestProvider {
           call.respond(openidIssuerMetadata)
         }
         post("/par") {
-          call.request.headers.toMap()
-          val params = call.receiveParameters().toMap()
+          val authReq = AuthorizationRequest.fromHttpParameters(call.receiveParameters().toMap())
         }
       }
     }.start()

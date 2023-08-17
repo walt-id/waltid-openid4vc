@@ -1,8 +1,14 @@
 package id.walt.oid4vc.data
 
 import id.walt.oid4vc.definitions.OPENID_CREDENTIAL_AUTHORIZATION_TYPE
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -21,7 +27,7 @@ import kotlinx.serialization.json.jsonObject
  */
 @Serializable
 data class AuthorizationDetails(
-  val type: String = OPENID_CREDENTIAL_AUTHORIZATION_TYPE,
+  @EncodeDefault val type: String = OPENID_CREDENTIAL_AUTHORIZATION_TYPE,
   val format: String? = null,
   val types: List<String>? = null,
   @Serializable(ClaimDescriptorMapSerializer::class) val credentialSubject: Map<String, ClaimDescriptor>? = null,
@@ -39,4 +45,9 @@ data class AuthorizationDetails(
 
 object AuthorizationDetailsSerializer: JsonDataObjectSerializer<AuthorizationDetails>(AuthorizationDetails.serializer())
 
-
+object AuthorizationDetailsListSerializer: KSerializer<List<AuthorizationDetails>> {
+  private val internalSerializer = ListSerializer(AuthorizationDetailsSerializer)
+  override val descriptor: SerialDescriptor = internalSerializer.descriptor
+  override fun deserialize(decoder: Decoder): List<AuthorizationDetails> = internalSerializer.deserialize(decoder)
+  override fun serialize(encoder: Encoder, value: List<AuthorizationDetails>) = internalSerializer.serialize(encoder, value)
+}

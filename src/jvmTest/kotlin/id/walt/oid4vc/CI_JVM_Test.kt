@@ -1,9 +1,12 @@
 package id.walt.oid4vc
 
 import id.walt.oid4vc.data.*
+import id.walt.oid4vc.definitions.OPENID_CREDENTIAL_AUTHORIZATION_TYPE
+import id.walt.oid4vc.requests.AuthorizationRequest
 import io.kotest.assertions.json.shouldMatchJson
 import io.kotest.core.spec.style.AnnotationSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
@@ -11,6 +14,7 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import io.ktor.util.*
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -132,6 +136,39 @@ class CI_JVM_Test: AnnotationSpec() {
     response.status shouldBe HttpStatusCode.OK
     val metadata: OpenIDProviderMetadata = response.body()
     metadata.toJSONString() shouldMatchJson CITestProvider.openidIssuerMetadata.toJSONString()
+  }
+
+  @Test
+  fun testAuthorizationRequestSerialization() {
+    val authorizationReq = "response_type=code" +
+        "&client_id=s6BhdRkqt3" +
+        "&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM" +
+        "&code_challenge_method=S256" +
+        "&authorization_details=%5B%7B%22type%22:%22openid_credential" +
+        "%22,%22format%22:%22jwt_vc_json%22,%22types%22:%5B%22Verifia" +
+        "bleCredential%22,%22UniversityDegreeCredential%22%5D%7D%5D" +
+        "&redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb"
+    val parsedReq = AuthorizationRequest.fromHttpQueryString(authorizationReq)
+    parsedReq.clientId shouldBe "s6BhdRkqt3"
+    parsedReq.authorizationDetails shouldNotBe null
+    parsedReq.authorizationDetails!!.first().type shouldBe "openid_credential"
+
+    val expectedReq = AuthorizationRequest(clientId = "s6BhdRkqt3", redirectUri = "https://client.example.org/cb",
+      authorizationDetails = listOf(
+        AuthorizationDetails(
+          type = OPENID_CREDENTIAL_AUTHORIZATION_TYPE,
+          format = "jwt_vc_json",
+          types = listOf("VerifiableCredential", "UniversityDegreeCredential")
+        )
+      ),
+      customParameters = mapOf(
+        "code_challenge" to listOf("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"),
+        "code_challenge_method" to listOf("S256")
+      )
+    )
+
+    parsedReq.toHttpQueryString() shouldBe expectedReq.toHttpQueryString()
+    parseQueryString(parsedReq.toHttpQueryString()) shouldBe parseQueryString(authorizationReq)
   }
 
   @Test
