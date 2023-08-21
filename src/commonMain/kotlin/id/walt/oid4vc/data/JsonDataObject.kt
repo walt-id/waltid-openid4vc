@@ -1,5 +1,6 @@
 package id.walt.oid4vc.data
 
+import io.ktor.utils.io.*
 import kotlinx.serialization.*
 import kotlinx.serialization.descriptors.elementNames
 import kotlinx.serialization.json.*

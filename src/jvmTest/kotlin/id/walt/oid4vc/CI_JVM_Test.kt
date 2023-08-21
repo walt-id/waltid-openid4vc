@@ -2,60 +2,66 @@ package id.walt.oid4vc
 
 import id.walt.oid4vc.data.*
 import id.walt.oid4vc.definitions.OPENID_CREDENTIAL_AUTHORIZATION_TYPE
+import id.walt.oid4vc.definitions.RESPONSE_TYPE_CODE
 import id.walt.oid4vc.requests.AuthorizationRequest
+import id.walt.oid4vc.responses.PushedAuthorizationResponse
 import io.kotest.assertions.json.shouldMatchJson
 import io.kotest.core.spec.style.AnnotationSpec
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.string.shouldStartWith
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.request.forms.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import io.ktor.util.*
+import io.mockk.InternalPlatformDsl.toStr
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 class CI_JVM_Test: AnnotationSpec() {
 
-  var oid4vciProvider = OpenIDProvider("test-ci-provider", "https://localhost", "Test CI provider",
-    metadata = OpenIDProviderMetadata(
-      authorizationEndpoint = "https://localhost/oidc",
-      credentialsSupported = listOf(
-        CredentialSupported("jwt_vc_json", "jwt_vc_json_fmt", setOf("did"), setOf("ES256K"),
-          listOf(DisplayProperties(
-            "University Credential",
-            "en-US",
-            LogoProperties("https://exampleuniversity.com/public/logo.png", "a square logo of a university"),
-            backgroundColor = "#12107c", textColor = "#FFFFFF"
-          )),
-          types = listOf("VerifiableCredential", "UniversityDegreeCredential"),
-          credentialSubject = mapOf(
-            "name" to ClaimDescriptor(
-              mandatory = false,
-              display = listOf(DisplayProperties("Full Name")),
-              customParameters = mapOf(
-              "firstName" to ClaimDescriptor(valueType = "string", display = listOf(DisplayProperties("First Name"))).toJSON(),
-              "lastName" to ClaimDescriptor(valueType = "string", display = listOf(DisplayProperties("Last Name"))).toJSON()
-            ))
-          )
-        ),
-        CredentialSupported("ldp_vc", "ldp_vc_1", setOf("did"), setOf("ES256K"),
-          listOf(DisplayProperties("Verifiable ID")),
-          types = listOf("VerifiableCredential", "VerifiableId"),
-          context = listOf(
-            JsonPrimitive("https://www.w3.org/2018/credentials/v1"),
-            JsonObject(mapOf("@version" to JsonPrimitive(1.1))))
+  var testMetadata = OpenIDProviderMetadata(
+    authorizationEndpoint = "https://localhost/oidc",
+    credentialsSupported = listOf(
+      CredentialSupported("jwt_vc_json", "jwt_vc_json_fmt", setOf("did"), setOf("ES256K"),
+        listOf(DisplayProperties(
+          "University Credential",
+          "en-US",
+          LogoProperties("https://exampleuniversity.com/public/logo.png", "a square logo of a university"),
+          backgroundColor = "#12107c", textColor = "#FFFFFF"
+        )),
+        types = listOf("VerifiableCredential", "UniversityDegreeCredential"),
+        credentialSubject = mapOf(
+          "name" to ClaimDescriptor(
+            mandatory = false,
+            display = listOf(DisplayProperties("Full Name")),
+            customParameters = mapOf(
+            "firstName" to ClaimDescriptor(valueType = "string", display = listOf(DisplayProperties("First Name"))).toJSON(),
+            "lastName" to ClaimDescriptor(valueType = "string", display = listOf(DisplayProperties("Last Name"))).toJSON()
+          ))
         )
+      ),
+      CredentialSupported("ldp_vc", "ldp_vc_1", setOf("did"), setOf("ES256K"),
+        listOf(DisplayProperties("Verifiable ID")),
+        types = listOf("VerifiableCredential", "VerifiableId"),
+        context = listOf(
+          JsonPrimitive("https://www.w3.org/2018/credentials/v1"),
+          JsonObject(mapOf("@version" to JsonPrimitive(1.1))))
       )
     )
   )
+
   val ktorClient = HttpClient(CIO) {
     install(ContentNegotiation) {
       json()
     }
+    followRedirects = false
   }
 
   @BeforeAll
@@ -124,7 +130,7 @@ class CI_JVM_Test: AnnotationSpec() {
 
   @Test
   fun testOIDProviderMetadata() {
-    val metadataJson = oid4vciProvider.metadata.toJSONString()
+    val metadataJson = testMetadata.toJSONString()
     println(metadataJson)
     val metadataParsed = OpenIDProviderMetadata.fromJSONString(metadataJson)
     metadataParsed.toJSONString() shouldMatchJson metadataJson
@@ -134,8 +140,9 @@ class CI_JVM_Test: AnnotationSpec() {
   suspend fun testFetchAndParseMetadata() {
     val response = ktorClient.get("http://localhost:8000/.well-known/openid-configuration")
     response.status shouldBe HttpStatusCode.OK
-    val metadata: OpenIDProviderMetadata = response.body()
-    metadata.toJSONString() shouldMatchJson CITestProvider.openidIssuerMetadata.toJSONString()
+    val respText = response.bodyAsText()
+    val metadata: OpenIDProviderMetadata = OpenIDProviderMetadata.fromJSONString(respText)
+    metadata.toJSONString() shouldMatchJson CITestProvider.ciProvider.metadata.toJSONString()
   }
 
   @Test
@@ -172,7 +179,74 @@ class CI_JVM_Test: AnnotationSpec() {
   }
 
   @Test
-  fun testFullAuthCodeFlow() {
+  suspend fun testInvalidAuthorizationRequest() {
+    // 0. get issuer metadata
+    val providerMetadata = ktorClient.get(CITestProvider.ciProvider.getCIProviderMetadataUrl()).call.body<OpenIDProviderMetadata>()
+    providerMetadata.pushedAuthorizationRequestEndpoint shouldNotBe null
+
+    // 1. send pushed authorization request with authorization details, containing info of credentials to be issued, receive session id
+    val authReq = AuthorizationRequest(
+      responseType = RESPONSE_TYPE_CODE,
+      clientId = "test-client",
+      redirectUri = "http://blank/",
+      authorizationDetails = listOf(AuthorizationDetails(
+        type = OPENID_CREDENTIAL_AUTHORIZATION_TYPE
+      ))
+    )
+    val parResp = ktorClient.submitForm(
+      providerMetadata.pushedAuthorizationRequestEndpoint!!,
+      formParameters = parametersOf(authReq.toHttpParameters())
+    ).body<JsonObject>().let { PushedAuthorizationResponse.fromJSON(it) }
+
+    parResp.isSuccess shouldBe false
+    parResp.error shouldBe "invalid_request"
+  }
+
+  @Test
+  suspend fun testFullAuthCodeFlow() {
+    // 0. get issuer metadata
+    val providerMetadata = ktorClient.get(CITestProvider.ciProvider.getCIProviderMetadataUrl()).call.body<OpenIDProviderMetadata>()
+    providerMetadata.pushedAuthorizationRequestEndpoint shouldNotBe null
+
+    // 1. send pushed authorization request with authorization details, containing info of credentials to be issued, receive session id
+    val pushedAuthReq = AuthorizationRequest(
+      responseType = RESPONSE_TYPE_CODE,
+      clientId = "test-client",
+      redirectUri = "http://blank/",
+      authorizationDetails = listOf(AuthorizationDetails(
+        type = OPENID_CREDENTIAL_AUTHORIZATION_TYPE,
+        format = CredentialFormat.JWT_VC_JSON.value,
+        types = listOf("VerifiableCredential", "VerifiableId")
+      ))
+    )
+    val pushedAuthResp = ktorClient.submitForm(
+      providerMetadata.pushedAuthorizationRequestEndpoint!!,
+      formParameters = parametersOf(pushedAuthReq.toHttpParameters())
+    ).body<JsonObject>().let { PushedAuthorizationResponse.fromJSON(it) }
+
+    pushedAuthResp.isSuccess shouldBe true
+    pushedAuthResp.requestUri shouldStartWith "urn:ietf:params:oauth:request_uri:"
+
+    // 2. call authorize endpoint with request uri, receive HTTP redirect (302 Found) with Location header
+    providerMetadata.authorizationEndpoint shouldNotBe null
+    val authReq = AuthorizationRequest(responseType = RESPONSE_TYPE_CODE, clientId = "test-client", requestUri = pushedAuthResp.requestUri)
+    val authResp = ktorClient.get(providerMetadata.authorizationEndpoint!!) {
+      url {
+        parameters.appendAll(parametersOf(authReq.toHttpParameters()))
+      }
+    }
+    authResp.status shouldBe HttpStatusCode.Found
+    authResp.headers.names() shouldContain HttpHeaders.Location
+    val location = Url(authResp.headers[HttpHeaders.Location]!!)
+    location.toString() shouldStartWith pushedAuthReq.redirectUri!!
+    location.parameters.names() shouldContain RESPONSE_TYPE_CODE
+
+    // 3. Parse code response parameter from authorization redirect URI
+
+
+    // 4. Call token endpoint with code from authorization response, receive access token from response
+
+    // 5. Call credential endpoint with access token, to receive credential
 
   }
 

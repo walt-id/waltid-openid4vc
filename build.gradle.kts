@@ -57,6 +57,7 @@ kotlin {
                 implementation("com.soywiz.korlibs.krypto:krypto:$kryptoVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.1")
                 implementation("io.ktor:ktor-http:$ktor_version")
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
             }
         }
         val commonTest by getting {

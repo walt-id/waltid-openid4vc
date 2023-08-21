@@ -17,8 +17,10 @@ data class AuthorizationRequest(
   val walletIssuer: String? = null,
   val userHint: String? = null,
   val issuerState: String? = null,
+  val requestUri: String? = null,
   override val customParameters: Map<String, List<String>> = mapOf()
 ): HTTPDataObject() {
+  val isReferenceToPAR get() = requestUri != null
   override fun toHttpParameters(): Map<String, List<String>> {
     return buildMap {
       put("response_type", listOf(responseType))
@@ -31,6 +33,7 @@ data class AuthorizationRequest(
       walletIssuer?.let { put("wallet_issuer", listOf(it)) }
       userHint?.let { put("user_hint", listOf(it)) }
       issuerState?.let { put("issuer_state", listOf(it)) }
+      requestUri?.let { put("request_uri", listOf(it)) }
       putAll(customParameters)
     }
   }
@@ -48,6 +51,7 @@ data class AuthorizationRequest(
         parameters["wallet_issuer"]?.firstOrNull(),
         parameters["user_hint"]?.firstOrNull(),
         parameters["issuer_state"]?.firstOrNull(),
+        parameters["request_uri"]?.firstOrNull(),
         parameters.filterKeys { !knownKeys.contains(it) }
       )
     }
