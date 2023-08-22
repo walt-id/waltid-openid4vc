@@ -35,6 +35,16 @@ data class AuthorizationResponse private constructor (
     }
 
     fun success(code: String, customParameters: Map<String, List<String>> = mapOf()) = AuthorizationResponse(code, null, null, customParameters)
-    fun error(error: String, errorDescription: String? = null, customParameters: Map<String, List<String>> = mapOf()) = AuthorizationResponse(null, error, errorDescription, customParameters)
+    fun error(error: AuthorizationErrorCode, errorDescription: String? = null, customParameters: Map<String, List<String>> = mapOf()) = AuthorizationResponse(null, error.value, errorDescription, customParameters)
   }
+}
+
+enum class AuthorizationErrorCode(val value: String) {
+  INVALID_REQUEST("invalid_request"),
+  UNAUTHORIZED_CLIENT("unauthorized_client"),
+  ACCESS_DENIED("access_denied"),
+  UNSUPPORTED_RESPONSE_TYPE("unsupported_response_type"),
+  INVALID_SCOPE("invalid_scope"),
+  SERVER_ERROR("server_error"),
+  TEMPORARILY_UNAVAILABLE("temporarily_unavailable")
 }

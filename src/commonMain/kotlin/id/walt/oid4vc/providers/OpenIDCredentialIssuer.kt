@@ -3,6 +3,7 @@ package id.walt.oid4vc.providers
 import id.walt.oid4vc.data.*
 import id.walt.oid4vc.definitions.OPENID_CREDENTIAL_AUTHORIZATION_TYPE
 import id.walt.oid4vc.requests.AuthorizationRequest
+import id.walt.oid4vc.responses.AuthorizationErrorCode
 import id.walt.oid4vc.responses.AuthorizationResponse
 import id.walt.oid4vc.util.randomUUID
 import id.walt.sdjwt.JWTCryptoProvider
@@ -44,22 +45,8 @@ open class OpenIDCredentialIssuer(
         }
   }
 
-  private fun validateAuthorizationRequest(authorizationRequest: AuthorizationRequest): Boolean {
+  override fun validateAuthorizationRequest(authorizationRequest: AuthorizationRequest): Boolean {
     return authorizationRequest.authorizationDetails != null && authorizationRequest.authorizationDetails.any { isSupportedAuthorizationDetails(it) }
-  }
-
-  override fun initializeAuthorization(authorizationRequest: AuthorizationRequest, expiresIn: Int): AuthorizationSession {
-    if(!validateAuthorizationRequest(authorizationRequest)) {
-      throw AuthorizationError(authorizationRequest, "No valid authorization details for credential issuance found on authorization request")
-    }
-    return AuthorizationSession(randomUUID(), authorizationRequest, Clock.System.now().plus(expiresIn, DateTimeUnit.SECOND).epochSeconds).also {
-      sessionCache.put(it.id, it)
-    }
-  }
-
-  override fun continueAuthorization(authorizationSession: AuthorizationSession): AuthorizationResponse {
-    val code = cryptoProvider.sign(buildJsonObject { put("sub", authorizationSession.id) }, config.authorizationCodeKeyId)
-    return AuthorizationResponse.success(code)
   }
 
   fun getCIProviderMetadataUrl(): String {

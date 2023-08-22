@@ -11,6 +11,7 @@ import com.nimbusds.jose.produce.JWSSignerFactory
 import id.walt.oid4vc.data.*
 import id.walt.oid4vc.providers.*
 import id.walt.oid4vc.requests.AuthorizationRequest
+import id.walt.oid4vc.requests.TokenRequest
 import id.walt.sdjwt.SimpleJWTCryptoProvider
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
@@ -87,7 +88,7 @@ object CITestProvider {
           try {
             val authSession = when(authReq.isReferenceToPAR) {
               true -> ciProvider.getPushedAuthorizationSession(authReq)
-              false -> ciProvider.initializeAuthorization(authReq)
+              false -> ciProvider.initializeAuthorization(authReq, 600)
             }
             val authResp = ciProvider.continueAuthorization(authSession)
             call.response.apply {
@@ -103,6 +104,16 @@ object CITestProvider {
                 parameters.appendAll(parametersOf(authExc.toAuthorizationErrorResponse().toHttpParameters()))
               }.buildString())
             }
+          }
+        }
+        post("/token") {
+          val params = call.receiveParameters().toMap()
+          val tokenReq = TokenRequest.fromHttpParameters(params)
+          try {
+            val tokenResp = ciProvider.processTokenRequest(tokenReq)
+            call.respond(tokenResp.toJSON())
+          } catch (exc: TokenError) {
+            call.respond(HttpStatusCode.BadRequest, exc.toAuthorizationErrorResponse().toJSON())
           }
         }
       }

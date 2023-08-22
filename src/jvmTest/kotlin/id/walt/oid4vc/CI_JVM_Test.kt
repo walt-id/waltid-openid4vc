@@ -4,7 +4,9 @@ import id.walt.oid4vc.data.*
 import id.walt.oid4vc.definitions.OPENID_CREDENTIAL_AUTHORIZATION_TYPE
 import id.walt.oid4vc.definitions.RESPONSE_TYPE_CODE
 import id.walt.oid4vc.requests.AuthorizationRequest
+import id.walt.oid4vc.requests.TokenRequest
 import id.walt.oid4vc.responses.PushedAuthorizationResponse
+import id.walt.oid4vc.responses.TokenResponse
 import io.kotest.assertions.json.shouldMatchJson
 import io.kotest.core.spec.style.AnnotationSpec
 import io.kotest.matchers.collections.shouldContain
@@ -20,6 +22,7 @@ import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import io.ktor.util.*
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -241,7 +244,19 @@ class CI_JVM_Test: AnnotationSpec() {
     location.parameters.names() shouldContain RESPONSE_TYPE_CODE
 
     // 3. Parse code response parameter from authorization redirect URI
+    providerMetadata.tokenEndpoint shouldNotBe null
 
+    val tokenReq = TokenRequest(
+      grantType = GrantType.AUTHORIZATION_CODE,
+      clientId = pushedAuthReq.clientId,
+      redirectUri = pushedAuthReq.redirectUri,
+      code = location.parameters["code"]!!
+    )
+    val tokenResp = ktorClient.submitForm(
+      providerMetadata.tokenEndpoint!!,
+      formParameters = parametersOf(tokenReq.toHttpParameters())
+    ).body<JsonObject>().let { TokenResponse.fromJSON(it) }
+     tokenResp.isSuccess shouldBe true
 
     // 4. Call token endpoint with code from authorization response, receive access token from response
 
