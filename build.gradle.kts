@@ -14,6 +14,7 @@ version = "1.SNAPSHOT"
 
 repositories {
     mavenCentral()
+    maven("https://maven.walt.id/repository/waltid-ssi-kit/")
 }
 
 kotlin {
@@ -58,6 +59,7 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.1")
                 implementation("io.ktor:ktor-http:$ktor_version")
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
+                implementation("id.walt:waltid-sd-jwt:1.2306191408.0")
             }
         }
         val commonTest by getting {

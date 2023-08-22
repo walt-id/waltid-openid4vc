@@ -13,12 +13,4 @@ data class AuthorizationSession(
   val expirationTimestamp: Long
 ) {
   val isExpired get() = expirationTimestamp < Clock.System.now().epochSeconds
-  fun getAuthorizationSuccessResponse() = AuthorizationResponse.success(
-    TODO()
-  )
-
-  fun getPushedAuthorizationSuccessResponse() = PushedAuthorizationResponse.success(
-    requestUri = "urn:ietf:params:oauth:request_uri:$id",
-    expiresIn = expirationTimestamp - Clock.System.now().epochSeconds
-  )
 }
