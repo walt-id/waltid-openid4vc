@@ -14,7 +14,25 @@ version = "1.SNAPSHOT"
 
 repositories {
     mavenCentral()
-    maven("https://maven.walt.id/repository/waltid-ssi-kit/")
+    maven("https://jitpack.io") {
+        content {
+            includeGroup("com.github.multiformats")
+        }
+    }
+    maven("https://maven.walt.id/repository/waltid-ssi-kit/") {
+        content {
+            includeGroup("id.walt")
+        }
+    }
+    maven("https://maven.walt.id/repository/waltid/") {
+        content {
+            includeGroup("id.walt")
+            includeGroup("id.walt.servicematrix")
+            includeGroup("info.weboftrust")
+            includeGroup("decentralized-identity")
+            includeGroup("com.danubetech")
+        }
+    }
 }
 
 kotlin {
@@ -82,7 +100,8 @@ kotlin {
                 implementation("io.kotest:kotest-assertions-core:5.5.5")
                 implementation("io.kotest:kotest-assertions-json:5.5.5")
 
-                implementation("com.nimbusds:oauth2-oidc-sdk:10.7")
+                implementation("id.walt.servicematrix:WaltID-ServiceMatrix:1.1.3")
+                implementation("id.walt:waltid-ssikit:1.2308021811.0")
 
                 implementation("io.ktor:ktor-server-core-jvm:$ktor_version")
                 implementation("io.ktor:ktor-server-netty-jvm:$ktor_version")
@@ -93,6 +112,7 @@ kotlin {
                 implementation("io.ktor:ktor-client-cio:$ktor_version")
                 implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
                 implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
+
             }
         }
         val jsMain by getting {

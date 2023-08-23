@@ -1,12 +1,28 @@
 package id.walt.oid4vc
 
+import com.nimbusds.jose.JWSAlgorithm
+import com.nimbusds.jose.JWSHeader
+import com.nimbusds.jose.crypto.factories.DefaultJWSSignerFactory
+import com.nimbusds.jose.crypto.factories.DefaultJWSVerifierFactory
+import com.nimbusds.jose.jwk.Curve
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator
+import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
+import id.walt.crypto.KeyAlgorithm
 import id.walt.oid4vc.data.*
 import id.walt.oid4vc.definitions.OPENID_CREDENTIAL_AUTHORIZATION_TYPE
 import id.walt.oid4vc.definitions.RESPONSE_TYPE_CODE
+import id.walt.oid4vc.providers.CredentialWallet
+import id.walt.oid4vc.providers.CredentialWalletConfig
+import id.walt.oid4vc.providers.OpenIDCredentialIssuer
 import id.walt.oid4vc.requests.AuthorizationRequest
+import id.walt.oid4vc.requests.CredentialRequest
 import id.walt.oid4vc.requests.TokenRequest
+import id.walt.oid4vc.responses.CredentialResponse
 import id.walt.oid4vc.responses.PushedAuthorizationResponse
 import id.walt.oid4vc.responses.TokenResponse
+import id.walt.sdjwt.SimpleJWTCryptoProvider
+import id.walt.servicematrix.ServiceMatrix
+import id.walt.services.key.KeyService
 import io.kotest.assertions.json.shouldMatchJson
 import io.kotest.core.spec.style.AnnotationSpec
 import io.kotest.matchers.collections.shouldContain
@@ -66,9 +82,15 @@ class CI_JVM_Test: AnnotationSpec() {
     followRedirects = false
   }
 
+  private lateinit var ciTestProvider: CITestProvider
+  private lateinit var credentialWallet: TestCredentialWallet
+
   @BeforeAll
   fun init() {
-    CITestProvider.start()
+    ServiceMatrix("service-matrix.properties")
+    ciTestProvider = CITestProvider()
+    credentialWallet = TestCredentialWallet(CredentialWalletConfig("test-client", redirectUri = "http://blank"))
+    ciTestProvider.start()
   }
 
   @Test
@@ -144,7 +166,7 @@ class CI_JVM_Test: AnnotationSpec() {
     response.status shouldBe HttpStatusCode.OK
     val respText = response.bodyAsText()
     val metadata: OpenIDProviderMetadata = OpenIDProviderMetadata.fromJSONString(respText)
-    metadata.toJSONString() shouldMatchJson CITestProvider.ciProvider.metadata.toJSONString()
+    metadata.toJSONString() shouldMatchJson ciTestProvider.metadata.toJSONString()
   }
 
   @Test
@@ -183,14 +205,14 @@ class CI_JVM_Test: AnnotationSpec() {
   @Test
   suspend fun testInvalidAuthorizationRequest() {
     // 0. get issuer metadata
-    val providerMetadata = ktorClient.get(CITestProvider.ciProvider.getCIProviderMetadataUrl()).call.body<OpenIDProviderMetadata>()
+    val providerMetadata = ktorClient.get(ciTestProvider.getCIProviderMetadataUrl()).call.body<OpenIDProviderMetadata>()
     providerMetadata.pushedAuthorizationRequestEndpoint shouldNotBe null
 
     // 1. send pushed authorization request with authorization details, containing info of credentials to be issued, receive session id
     val authReq = AuthorizationRequest(
       responseType = RESPONSE_TYPE_CODE,
-      clientId = "test-client",
-      redirectUri = "http://blank/",
+      clientId = credentialWallet.config.clientID,
+      redirectUri = credentialWallet.config.redirectUri,
       authorizationDetails = listOf(AuthorizationDetails(
         type = OPENID_CREDENTIAL_AUTHORIZATION_TYPE
       ))
@@ -207,17 +229,17 @@ class CI_JVM_Test: AnnotationSpec() {
   @Test
   suspend fun testFullAuthCodeFlow() {
     // 0. get issuer metadata
-    val providerMetadata = ktorClient.get(CITestProvider.ciProvider.getCIProviderMetadataUrl()).call.body<OpenIDProviderMetadata>()
+    val providerMetadata = ktorClient.get(ciTestProvider.getCIProviderMetadataUrl()).call.body<OpenIDProviderMetadata>()
     providerMetadata.pushedAuthorizationRequestEndpoint shouldNotBe null
 
     // 1. send pushed authorization request with authorization details, containing info of credentials to be issued, receive session id
     val pushedAuthReq = AuthorizationRequest(
       responseType = RESPONSE_TYPE_CODE,
-      clientId = "test-client",
-      redirectUri = "http://blank/",
+      clientId = credentialWallet.config.clientID,
+      redirectUri = credentialWallet.config.redirectUri,
       authorizationDetails = listOf(AuthorizationDetails(
         type = OPENID_CREDENTIAL_AUTHORIZATION_TYPE,
-        format = CredentialFormat.JWT_VC_JSON.value,
+        format = CredentialFormat.jwt_vc_json.value,
         types = listOf("VerifiableCredential", "VerifiableId")
       ))
     )
@@ -231,7 +253,7 @@ class CI_JVM_Test: AnnotationSpec() {
 
     // 2. call authorize endpoint with request uri, receive HTTP redirect (302 Found) with Location header
     providerMetadata.authorizationEndpoint shouldNotBe null
-    val authReq = AuthorizationRequest(responseType = RESPONSE_TYPE_CODE, clientId = "test-client", requestUri = pushedAuthResp.requestUri)
+    val authReq = AuthorizationRequest(responseType = RESPONSE_TYPE_CODE, clientId = credentialWallet.config.clientID, requestUri = pushedAuthResp.requestUri)
     val authResp = ktorClient.get(providerMetadata.authorizationEndpoint!!) {
       url {
         parameters.appendAll(parametersOf(authReq.toHttpParameters()))
@@ -240,27 +262,42 @@ class CI_JVM_Test: AnnotationSpec() {
     authResp.status shouldBe HttpStatusCode.Found
     authResp.headers.names() shouldContain HttpHeaders.Location
     val location = Url(authResp.headers[HttpHeaders.Location]!!)
-    location.toString() shouldStartWith pushedAuthReq.redirectUri!!
+    location.toString() shouldStartWith credentialWallet.config.redirectUri!!
     location.parameters.names() shouldContain RESPONSE_TYPE_CODE
 
     // 3. Parse code response parameter from authorization redirect URI
     providerMetadata.tokenEndpoint shouldNotBe null
 
     val tokenReq = TokenRequest(
-      grantType = GrantType.AUTHORIZATION_CODE,
-      clientId = pushedAuthReq.clientId,
-      redirectUri = pushedAuthReq.redirectUri,
+      grantType = GrantType.authorization_code,
+      clientId = credentialWallet.config.clientID,
+      redirectUri = credentialWallet.config.redirectUri,
       code = location.parameters["code"]!!
     )
+
+    // 4. Call token endpoint with code from authorization response, receive access token from response
     val tokenResp = ktorClient.submitForm(
       providerMetadata.tokenEndpoint!!,
       formParameters = parametersOf(tokenReq.toHttpParameters())
     ).body<JsonObject>().let { TokenResponse.fromJSON(it) }
-     tokenResp.isSuccess shouldBe true
-
-    // 4. Call token endpoint with code from authorization response, receive access token from response
+    tokenResp.isSuccess shouldBe true
+    tokenResp.accessToken shouldNotBe null
+    tokenResp.cNonce shouldNotBe null
 
     // 5. Call credential endpoint with access token, to receive credential
+    providerMetadata.credentialEndpoint shouldNotBe null
+
+    val credReq = CredentialRequest.forAuthorizationDetails(
+      pushedAuthReq.authorizationDetails!!.first(),
+      credentialWallet.generateDidProof(credentialWallet.TEST_DID, ciTestProvider.baseUrl, tokenResp.cNonce!!))
+
+    val credentialResp = ktorClient.post(providerMetadata.credentialEndpoint!!) {
+      contentType(ContentType.Application.Json)
+      setBody(credReq.toJSON())
+    }.body<JsonObject>().let { CredentialResponse.fromJSON(it) }
+
+    credentialResp.isSuccess shouldBe true
+    credentialResp.format!! shouldBe pushedAuthReq.authorizationDetails!!.first().format!!
 
   }
 

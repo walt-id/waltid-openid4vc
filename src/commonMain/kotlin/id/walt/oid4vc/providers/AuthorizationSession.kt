@@ -10,7 +10,8 @@ import kotlinx.datetime.Instant
 data class AuthorizationSession(
   val id: String,
   val authorizationRequest: AuthorizationRequest,
-  val expirationTimestamp: Long
+  val expirationTimestamp: Long,
+  var cNonce: String? = null
 ) {
   val isExpired get() = expirationTimestamp < Clock.System.now().epochSeconds
 }

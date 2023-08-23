@@ -4,13 +4,16 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Serializer
+import kotlinx.serialization.builtins.SetSerializer
+import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 
 @Serializable(with = GrantTypeSerializer::class)
 enum class GrantType(val value: String) {
-  AUTHORIZATION_CODE("authorization_code"),
-  PRE_AUTHORIZED_CODE("urn:ietf:params:oauth:grant-type:pre-authorized_code");
+  implicit("implicit"),
+  authorization_code("authorization_code"),
+  pre_authorized_code("urn:ietf:params:oauth:grant-type:pre-authorized_code");
   companion object {
     fun fromValue(value: String): GrantType? {
       return GrantType.values().find { it.value == value }
@@ -27,4 +30,11 @@ object GrantTypeSerializer: KSerializer<GrantType> {
   override fun deserialize(decoder: Decoder): GrantType {
     return GrantType.fromValue(decoder.decodeString())!!
   }
+}
+
+object GrantTypeSetSerializer: KSerializer<Set<GrantType>> {
+  val internalSerializer = SetSerializer(GrantTypeSerializer)
+  override val descriptor = internalSerializer.descriptor
+  override fun deserialize(decoder: Decoder) = internalSerializer.deserialize(decoder)
+  override fun serialize(encoder: Encoder, value: Set<GrantType>) = internalSerializer.serialize(encoder, value)
 }

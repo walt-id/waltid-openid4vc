@@ -5,7 +5,7 @@ import id.walt.oid4vc.responses.AuthorizationErrorCode
 import id.walt.oid4vc.responses.AuthorizationResponse
 import id.walt.oid4vc.responses.PushedAuthorizationResponse
 
-class AuthorizationError(val authorizationRequest: AuthorizationRequest, val errorCode: AuthorizationErrorCode, override val message: String?): Exception() {
+class AuthorizationError(val authorizationRequest: AuthorizationRequest, val errorCode: AuthorizationErrorCode, override val message: String? = null): Exception() {
   fun toAuthorizationErrorResponse() = AuthorizationResponse.error(errorCode, message)
   fun toPushedAuthorizationErrorResponse() = PushedAuthorizationResponse.error(errorCode, message)
 }

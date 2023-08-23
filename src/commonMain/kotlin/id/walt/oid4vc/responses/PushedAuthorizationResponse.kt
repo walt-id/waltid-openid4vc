@@ -24,7 +24,7 @@ data class PushedAuthorizationResponse private constructor (
       PushedAuthorizationResponseSerializer, jsonObject)
 
     fun success(requestUri: String, expiresIn: Long) = PushedAuthorizationResponse(requestUri, expiresIn, null, null)
-    fun error(error: AuthorizationErrorCode, errorDescription: String? = null) = PushedAuthorizationResponse(null, null, error.value, errorDescription)
+    fun error(error: AuthorizationErrorCode, errorDescription: String? = null) = PushedAuthorizationResponse(null, null, error.name, errorDescription)
   }
 }
 

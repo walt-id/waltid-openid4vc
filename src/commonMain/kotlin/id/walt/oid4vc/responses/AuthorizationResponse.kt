@@ -1,11 +1,7 @@
 package id.walt.oid4vc.responses
 
-import id.walt.oid4vc.data.AuthorizationDetailsListSerializer
 import id.walt.oid4vc.data.HTTPDataObject
 import id.walt.oid4vc.data.HTTPDataObjectFactory
-import id.walt.oid4vc.definitions.RESPONSE_TYPE_CODE
-import id.walt.oid4vc.requests.AuthorizationRequest
-import kotlinx.serialization.json.Json
 
 data class AuthorizationResponse private constructor (
   val code: String?,
@@ -35,16 +31,16 @@ data class AuthorizationResponse private constructor (
     }
 
     fun success(code: String, customParameters: Map<String, List<String>> = mapOf()) = AuthorizationResponse(code, null, null, customParameters)
-    fun error(error: AuthorizationErrorCode, errorDescription: String? = null, customParameters: Map<String, List<String>> = mapOf()) = AuthorizationResponse(null, error.value, errorDescription, customParameters)
+    fun error(error: AuthorizationErrorCode, errorDescription: String? = null, customParameters: Map<String, List<String>> = mapOf()) = AuthorizationResponse(null, error.name, errorDescription, customParameters)
   }
 }
 
-enum class AuthorizationErrorCode(val value: String) {
-  INVALID_REQUEST("invalid_request"),
-  UNAUTHORIZED_CLIENT("unauthorized_client"),
-  ACCESS_DENIED("access_denied"),
-  UNSUPPORTED_RESPONSE_TYPE("unsupported_response_type"),
-  INVALID_SCOPE("invalid_scope"),
-  SERVER_ERROR("server_error"),
-  TEMPORARILY_UNAVAILABLE("temporarily_unavailable")
+enum class AuthorizationErrorCode {
+  invalid_request,
+  unauthorized_client,
+  access_denied,
+  unsupported_response_type,
+  invalid_scope,
+  server_error,
+  temporarily_unavailable
 }
