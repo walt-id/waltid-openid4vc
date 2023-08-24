@@ -2,6 +2,7 @@ package id.walt.oid4vc.providers
 
 import id.walt.oid4vc.data.*
 import id.walt.oid4vc.definitions.OPENID_CREDENTIAL_AUTHORIZATION_TYPE
+import id.walt.oid4vc.interfaces.ICredentialProvider
 import id.walt.oid4vc.requests.AuthorizationRequest
 import id.walt.oid4vc.requests.CredentialRequest
 import id.walt.oid4vc.responses.*
@@ -9,14 +10,13 @@ import id.walt.oid4vc.util.randomUUID
 import id.walt.sdjwt.JWTCryptoProvider
 import io.ktor.http.*
 import kotlinx.datetime.Clock
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.jsonPrimitive
 
-open class OpenIDCredentialIssuer(
+abstract class OpenIDCredentialIssuer(
   baseUrl: String,
-  sessionCache: SessionCacheInterface<AuthorizationSession>,
-  cryptoProvider: JWTCryptoProvider,
   override val config: CredentialIssuerConfig
-): OpenIDProvider(baseUrl, sessionCache, cryptoProvider) {
+): OpenIDProvider(baseUrl), ICredentialProvider {
 
   protected open fun createDefaultProviderMetadata() = OpenIDProviderMetadata(
   issuer = "$baseUrl",
@@ -33,17 +33,21 @@ open class OpenIDCredentialIssuer(
   )
 
   override val metadata get() = createDefaultProviderMetadata()
+  private var _supportedCredentialFormats: Set<String>? = null
+  val supportedCredentialFormats get() = _supportedCredentialFormats ?:
+    (metadata.credentialsSupported?.map { it.format }?.toSet() ?: setOf()).also {
+      _supportedCredentialFormats = it
+    }
 
-  private fun isCredentialFormatSupported(format: String): Boolean {
-    return config.credentialsSupported.any { it.format == format }
-  }
-
-  private fun isW3CCredentialTypeSupported(types: List<String>): Boolean {
-    return config.credentialsSupported.any { it.types?.containsAll(types) == true }
-  }
-
-  private fun isMDOCCredentialSupported(docType: String): Boolean {
-    return config.credentialsSupported.any { it.docType?.equals(docType) == true }
+  private fun isCredentialTypeSupported(format: String, types: List<String>?, docType: String?): Boolean {
+    if(types.isNullOrEmpty() && docType.isNullOrEmpty())
+      return false
+    return config.credentialsSupported.any { cred ->
+      format == cred.format && (
+          (docType != null && cred.docType == docType) ||
+          (types != null && cred.types != null && cred.types.containsAll(types))
+        )
+    }
   }
 
   private fun isSupportedAuthorizationDetails(authorizationDetails: AuthorizationDetails): Boolean {
@@ -65,7 +69,7 @@ open class OpenIDCredentialIssuer(
     return session.apply {
       cNonce = randomUUID()
     }.also {
-      sessionCache.put(session.id, session)
+      putSession(session.id, session)
     }
   }
 
@@ -84,10 +88,11 @@ open class OpenIDCredentialIssuer(
       cNonce = generateProofOfPossessionNonceFor(session).cNonce,
       cNonceExpiresIn = session.expirationTimestamp - Clock.System.now().epochSeconds,
       message = message)
+
   fun generateCredentialResponse(credentialRequest: CredentialRequest, accessToken: String): CredentialResponse {
-    val accessInfo = parseToken(accessToken)
-    val sessionId = accessInfo.get("sub")!!.jsonPrimitive.content
-    val session = getSession(sessionId) ?: throw CredentialError(credentialRequest, CredentialErrorCode.invalid_token, "Session not found for given access token, or session expired.")
+    val accessInfo = parseTokenPayload(accessToken)
+    val sessionId = accessInfo["sub"]!!.jsonPrimitive.content
+    val session = getVerifiedSession(sessionId) ?: throw CredentialError(credentialRequest, CredentialErrorCode.invalid_token, "Session not found for given access token, or session expired.")
 
     if(credentialRequest.format.isNullOrEmpty() || credentialRequest.proof == null) {
       throw createCredentialError(credentialRequest, session, CredentialErrorCode.invalid_request, "Missing required parameters on credential request")
@@ -97,23 +102,23 @@ open class OpenIDCredentialIssuer(
       throw createCredentialError(credentialRequest, session, CredentialErrorCode.invalid_or_missing_proof, "Invalid proof of possession")
     }
 
-    if(!isCredentialFormatSupported(credentialRequest.format))
-      throw createCredentialError(credentialRequest, session, CredentialErrorCode.invalid_request, "Credential format not supported")
+    if(!supportedCredentialFormats.contains(credentialRequest.format))
+      throw createCredentialError(credentialRequest, session, CredentialErrorCode.unsupported_credential_format, "Credential format not supported")
 
     // TODO: check types, credential_definition.types, docType, one of them must be supported
     val types = credentialRequest.types ?: credentialRequest.credentialDefinition?.types
-    if(types == null && credentialRequest.docType == null ||
-      types != null && !isW3CCredentialTypeSupported(types) ||
-      credentialRequest.docType != null && !isMDOCCredentialSupported(credentialRequest.docType)
-    )
-      throw createCredentialError(credentialRequest, session, CredentialErrorCode.unsupported_credential_format, "No issuable credentials for given credential format found")
+    if(!isCredentialTypeSupported(credentialRequest.format, types, credentialRequest.docType))
+      throw createCredentialError(credentialRequest, session, CredentialErrorCode.unsupported_credential_type, "Credential type not supported")
 
-    // find issuable credential matching credential request
-    TODO()
+    // issue credential for credential request
+    val credential = generateCredentialFor(credentialRequest)
+    return CredentialResponse.Companion.success(credentialRequest.format, credential)
   }
 
   private fun validateProofOfPossesion(credentialRequest: CredentialRequest): Boolean {
-    TODO()
+    if(credentialRequest.proof?.proofType != ProofType.jwt || credentialRequest.proof.jwt == null)
+      return false
+    return verifyToken(TokenTarget.PROOF_OF_POSSESSION, credentialRequest.proof.jwt)
   }
 
   fun getCIProviderMetadataUrl(): String {

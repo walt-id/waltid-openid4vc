@@ -1,15 +1,16 @@
 package id.walt.oid4vc.providers
 
 import id.walt.oid4vc.data.ProofOfPossession
+import id.walt.oid4vc.definitions.JWTClaims
+import id.walt.oid4vc.interfaces.ITokenProvider
 import id.walt.sdjwt.JWTCryptoProvider
 import kotlinx.datetime.Clock
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 abstract class CredentialWallet(
-  override val config: CredentialWalletConfig,
-  val cryptoProvider: JWTCryptoProvider
-): OpenIDClient() {
+  override val config: CredentialWalletConfig
+): OpenIDClient(), ITokenProvider {
   /**
    * Resolve DID to key ID
    * @param did DID to resolve
@@ -17,15 +18,17 @@ abstract class CredentialWallet(
    */
   abstract fun resolveDID(did: String): String
 
-  fun generateDidProof(did: String, issuerUrl: String, nonce: String): ProofOfPossession {
+  open fun generateDidProof(did: String, issuerUrl: String, nonce: String): ProofOfPossession {
     val keyId = resolveDID(did)
     return ProofOfPossession(
-      jwt = cryptoProvider.sign(buildJsonObject {
-        put("iss", config.clientID)
-        put("aud", issuerUrl)
-        put("iat", Clock.System.now().epochSeconds)
-        put("nonce", nonce)
-      }, keyId)
+      jwt = signToken(TokenTarget.PROOF_OF_POSSESSION, buildJsonObject {
+        put(JWTClaims.Payload.issuer, config.clientID)
+        put(JWTClaims.Payload.audience, issuerUrl)
+        put(JWTClaims.Payload.issuedAtTime, Clock.System.now().epochSeconds)
+        put(JWTClaims.Payload.nonce, nonce)
+      }, header = buildJsonObject {
+        put(JWTClaims.Header.keyID, keyId)
+      }, keyId = keyId)
     )
   }
 }

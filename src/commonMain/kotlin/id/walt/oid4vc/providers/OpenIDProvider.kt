@@ -2,11 +2,13 @@ package id.walt.oid4vc.providers
 
 import id.walt.oid4vc.data.GrantType
 import id.walt.oid4vc.data.OpenIDProviderMetadata
+import id.walt.oid4vc.definitions.JWTClaims
+import id.walt.oid4vc.interfaces.ISessionCache
+import id.walt.oid4vc.interfaces.ITokenProvider
 import id.walt.oid4vc.requests.AuthorizationRequest
 import id.walt.oid4vc.requests.TokenRequest
 import id.walt.oid4vc.responses.*
 import id.walt.oid4vc.util.randomUUID
-import id.walt.sdjwt.JWTCryptoProvider
 import io.ktor.http.*
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
@@ -18,11 +20,10 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 
 abstract class OpenIDProvider(
   val baseUrl: String,
-  val sessionCache: SessionCacheInterface<AuthorizationSession>,
-  val cryptoProvider: JWTCryptoProvider
-) {
+): ISessionCache<AuthorizationSession>, ITokenProvider {
   abstract val metadata: OpenIDProviderMetadata
   abstract val config: OpenIDProviderConfig
+
   fun getCommonProviderMetadataUrl(): String {
     return URLBuilder(baseUrl).apply {
       pathSegments = listOf(".well-known", "openid-configuration")
@@ -30,18 +31,13 @@ abstract class OpenIDProvider(
   }
 
   protected open fun generateToken(sub: String, target: TokenTarget): String {
-    return cryptoProvider.sign(buildJsonObject { put("sub", sub); put("aud", target.name) }, config.authorizationCodeKeyId)
-  }
-
-  @OptIn(ExperimentalEncodingApi::class)
-  protected open fun parseToken(token: String): JsonObject {
-    return Json.decodeFromString<JsonObject>(Base64.UrlSafe.decode(token.split(".")[1]).decodeToString())
+    return signToken(target, buildJsonObject { put(JWTClaims.Payload.subject, sub); put(JWTClaims.Payload.audience, target.name) })
   }
 
   protected open fun verifyAndParseToken(token: String, target: TokenTarget): JsonObject? {
-    if(cryptoProvider.verify(token).verified) {
-      val payload = parseToken(token)
-      if(payload.keys.containsAll(setOf("sub", "aud")) && payload["aud"]!!.jsonPrimitive.content == target.name) {
+    if(verifyToken(target, token)) {
+      val payload = parseTokenPayload(token)
+      if(payload.keys.containsAll(setOf(JWTClaims.Payload.subject, JWTClaims.Payload.audience)) && payload[JWTClaims.Payload.audience]!!.jsonPrimitive.content == target.name) {
         return payload
       }
     }
@@ -63,7 +59,7 @@ abstract class OpenIDProvider(
       throw AuthorizationError(authorizationRequest, AuthorizationErrorCode.invalid_request, "No valid authorization details for credential issuance found on authorization request")
     }
     return AuthorizationSession(randomUUID(), authorizationRequest, Clock.System.now().plus(expiresIn, DateTimeUnit.SECOND).epochSeconds).also {
-      sessionCache.put(it.id, it)
+      putSession(it.id, it)
     }
   }
   open fun continueAuthorization(authorizationSession: AuthorizationSession): AuthorizationResponse {
@@ -78,10 +74,10 @@ abstract class OpenIDProvider(
     )
   }
 
-  protected fun getSession(sessionId: String): AuthorizationSession? {
-    return sessionCache.get(sessionId)?.let {
+  protected fun getVerifiedSession(sessionId: String): AuthorizationSession? {
+    return getSession(sessionId)?.let {
       if(it.isExpired) {
-        sessionCache.remove(sessionId)
+        removeSession(sessionId)
         null
       } else {
         it
@@ -98,7 +94,7 @@ abstract class OpenIDProvider(
     val payload = validateAuthorizationCode(code) ?: throw TokenError(tokenRequest, TokenErrorCode.invalid_grant, "Authorization code could not be verified")
 
     val sessionId = payload["sub"]!!.jsonPrimitive.content
-    val session = getSession(sessionId) ?: throw TokenError(tokenRequest, TokenErrorCode.invalid_request, "No authorization session found for given authorization code, or session expired.")
+    val session = getVerifiedSession(sessionId) ?: throw TokenError(tokenRequest, TokenErrorCode.invalid_request, "No authorization session found for given authorization code, or session expired.")
 
     return generateTokenResponse(session)
   }
@@ -110,7 +106,7 @@ abstract class OpenIDProvider(
 
   fun getPushedAuthorizationSession(authorizationRequest: AuthorizationRequest): AuthorizationSession {
     val session = authorizationRequest.requestUri?.let {
-      getSession(
+      getVerifiedSession(
         it.substringAfter("urn:ietf:params:oauth:request_uri:")
       ) ?: throw AuthorizationError(authorizationRequest, AuthorizationErrorCode.invalid_request,"No session found for given request URI, or session expired")
     } ?: throw AuthorizationError(authorizationRequest, AuthorizationErrorCode.invalid_request, "Authorization request does not refer to a pushed authorization session")

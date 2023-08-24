@@ -7,6 +7,9 @@ import com.nimbusds.jose.crypto.factories.DefaultJWSVerifierFactory
 import com.nimbusds.jose.jwk.Curve
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
+import id.walt.auditor.Auditor
+import id.walt.auditor.policies.SignaturePolicy
+import id.walt.credentials.w3c.VerifiableCredential
 import id.walt.crypto.KeyAlgorithm
 import id.walt.oid4vc.data.*
 import id.walt.oid4vc.definitions.OPENID_CREDENTIAL_AUTHORIZATION_TYPE
@@ -26,9 +29,12 @@ import id.walt.services.key.KeyService
 import io.kotest.assertions.json.shouldMatchJson
 import io.kotest.core.spec.style.AnnotationSpec
 import io.kotest.matchers.collections.shouldContain
+import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldStartWith
+import io.kotest.matchers.types.beOfType
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
@@ -39,8 +45,10 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.util.*
+import io.ktor.util.reflect.*
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonPrimitive
 
 class CI_JVM_Test: AnnotationSpec() {
 
@@ -293,12 +301,18 @@ class CI_JVM_Test: AnnotationSpec() {
 
     val credentialResp = ktorClient.post(providerMetadata.credentialEndpoint!!) {
       contentType(ContentType.Application.Json)
+      bearerAuth(tokenResp.accessToken!!)
       setBody(credReq.toJSON())
     }.body<JsonObject>().let { CredentialResponse.fromJSON(it) }
 
     credentialResp.isSuccess shouldBe true
-    credentialResp.format!! shouldBe pushedAuthReq.authorizationDetails!!.first().format!!
-
+    credentialResp.format!! shouldBe CredentialFormat.jwt_vc_json.value
+    credentialResp.credential.shouldBeInstanceOf<JsonPrimitive>()
+    val credential = VerifiableCredential.fromString(credentialResp.credential!!.jsonPrimitive.content)
+    println("Issued credential: $credential")
+    credential.issuer?.id shouldBe ciTestProvider.CI_ISSUER_DID
+    credential.credentialSubject?.id shouldBe credentialWallet.TEST_DID
+    Auditor.getService().verify(credential, listOf(SignaturePolicy())).result shouldBe true
   }
 
   @Test
