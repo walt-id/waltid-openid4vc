@@ -20,17 +20,19 @@ data class CredentialResponse private constructor(
   override val customParameters: Map<String, JsonElement> = mapOf()
 ): JsonDataObject() {
   val isSuccess get() = format != null
+  val isDeferred get() = isSuccess && credential == null
   override fun toJSON() = Json.encodeToJsonElement(CredentialResponseSerializer, this).jsonObject
 
   companion object: JsonDataObjectFactory<CredentialResponse>() {
     override fun fromJSON(jsonObject: JsonObject) = Json.decodeFromJsonElement(CredentialResponseSerializer, jsonObject)
-    fun success(format: String, credential: String, acceptanceToken: String? = null,
-                cNonce: String? = null, cNonceExpiresIn: Long? = null)
-    = CredentialResponse(format, JsonPrimitive(credential), acceptanceToken, cNonce, cNonceExpiresIn)
+    fun success(format: String, credential: String, cNonce: String? = null, cNonceExpiresIn: Long? = null)
+    = CredentialResponse(format, JsonPrimitive(credential), null, cNonce, cNonceExpiresIn)
 
-    fun success(format: String, credential: JsonElement, acceptanceToken: String? = null,
-                cNonce: String? = null, cNonceExpiresIn: Long? = null)
-    = CredentialResponse(format, credential, acceptanceToken, cNonce, cNonceExpiresIn)
+    fun success(format: String, credential: JsonElement, cNonce: String? = null, cNonceExpiresIn: Long? = null)
+    = CredentialResponse(format, credential, null, cNonce, cNonceExpiresIn)
+
+    fun deferred(format: String, acceptanceToken: String, cNonce: String? = null, cNonceExpiresIn: Long? = null)
+    = CredentialResponse(format, null, acceptanceToken, cNonce, cNonceExpiresIn)
     fun error(error: CredentialErrorCode, errorDescription: String? = null, errorUri: String? = null, cNonce: String? = null, cNonceExpiresIn: Long? = null)
     = CredentialResponse(
       error = error.name,

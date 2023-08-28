@@ -16,7 +16,7 @@ class TestCredentialWallet(
   override fun signToken(target: TokenTarget, payload: JsonObject, header: JsonObject?, keyId: String?)
     = JwtService.getService().sign(payload, keyId)
 
-  override fun verifyToken(target: TokenTarget, token: String)
+  override fun verifyTokenSignature(target: TokenTarget, token: String)
     = JwtService.getService().verify(token).verified
 
   val TEST_DID: String = DidService.create(DidMethod.key)

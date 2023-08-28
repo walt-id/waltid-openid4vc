@@ -1,16 +1,17 @@
 package id.walt.oid4vc.providers
 
 import id.walt.oid4vc.data.*
+import id.walt.oid4vc.definitions.JWTClaims
 import id.walt.oid4vc.definitions.OPENID_CREDENTIAL_AUTHORIZATION_TYPE
+import id.walt.oid4vc.interfaces.CredentialResult
 import id.walt.oid4vc.interfaces.ICredentialProvider
 import id.walt.oid4vc.requests.AuthorizationRequest
 import id.walt.oid4vc.requests.CredentialRequest
 import id.walt.oid4vc.responses.*
 import id.walt.oid4vc.util.randomUUID
-import id.walt.sdjwt.JWTCryptoProvider
 import io.ktor.http.*
 import kotlinx.datetime.Clock
-import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 abstract class OpenIDCredentialIssuer(
@@ -24,6 +25,8 @@ abstract class OpenIDCredentialIssuer(
   pushedAuthorizationRequestEndpoint = "$baseUrl/par",
   tokenEndpoint = "$baseUrl/token",
   credentialEndpoint = "$baseUrl/credential",
+  batchCredentialEndpoint = "$baseUrl/batch_credential",
+  deferredCredentialEndpoint = "$baseUrl/credential_deferred",
   jwksUri = "$baseUrl/jwks",
   grantTypesSupported = setOf(GrantType.authorization_code.value, GrantType.pre_authorized_code.value),
   requestUriParameterSupported = true,
@@ -81,44 +84,77 @@ abstract class OpenIDCredentialIssuer(
     )
   }
 
-  private fun createCredentialError(credReq: CredentialRequest, session: AuthorizationSession,
+  private fun createCredentialError(credReq: CredentialRequest?, session: AuthorizationSession,
                                     errorCode: CredentialErrorCode, message: String?) =
     CredentialError(credReq, errorCode, null,
-      // renew c_nonce for this session
-      cNonce = generateProofOfPossessionNonceFor(session).cNonce,
-      cNonceExpiresIn = session.expirationTimestamp - Clock.System.now().epochSeconds,
+      // renew c_nonce for this session, if the error was invalid_or_missing_proof
+      cNonce = if(errorCode == CredentialErrorCode.invalid_or_missing_proof) generateProofOfPossessionNonceFor(session).cNonce else null,
+      cNonceExpiresIn = if(errorCode == CredentialErrorCode.invalid_or_missing_proof) session.expirationTimestamp - Clock.System.now().epochSeconds else null,
       message = message)
 
-  fun generateCredentialResponse(credentialRequest: CredentialRequest, accessToken: String): CredentialResponse {
-    val accessInfo = parseTokenPayload(accessToken)
-    val sessionId = accessInfo["sub"]!!.jsonPrimitive.content
+  open fun generateCredentialResponse(credentialRequest: CredentialRequest, accessToken: String): CredentialResponse {
+    val accessInfo = verifyAndParseToken(accessToken, TokenTarget.ACCESS) ?: throw CredentialError(credentialRequest, CredentialErrorCode.invalid_token, message = "Invalid access token")
+    val sessionId = accessInfo[JWTClaims.Payload.subject]!!.jsonPrimitive.content
     val session = getVerifiedSession(sessionId) ?: throw CredentialError(credentialRequest, CredentialErrorCode.invalid_token, "Session not found for given access token, or session expired.")
 
-    if(credentialRequest.format.isNullOrEmpty() || credentialRequest.proof == null) {
+    if(credentialRequest.format.isNullOrEmpty()) {
       throw createCredentialError(credentialRequest, session, CredentialErrorCode.invalid_request, "Missing required parameters on credential request")
     }
 
-    if(!validateProofOfPossesion(credentialRequest)) {
+    if(credentialRequest.proof == null || !validateProofOfPossesion(credentialRequest)) {
       throw createCredentialError(credentialRequest, session, CredentialErrorCode.invalid_or_missing_proof, "Invalid proof of possession")
     }
 
     if(!supportedCredentialFormats.contains(credentialRequest.format))
       throw createCredentialError(credentialRequest, session, CredentialErrorCode.unsupported_credential_format, "Credential format not supported")
 
-    // TODO: check types, credential_definition.types, docType, one of them must be supported
+    // check types, credential_definition.types, docType, one of them must be supported
     val types = credentialRequest.types ?: credentialRequest.credentialDefinition?.types
     if(!isCredentialTypeSupported(credentialRequest.format, types, credentialRequest.docType))
       throw createCredentialError(credentialRequest, session, CredentialErrorCode.unsupported_credential_type, "Credential type not supported")
 
     // issue credential for credential request
-    val credential = generateCredentialFor(credentialRequest)
-    return CredentialResponse.Companion.success(credentialRequest.format, credential)
+    return createCredentialResponseFor(generateCredential(credentialRequest), session)
+  }
+
+  open fun generateDeferredCredentialResponse(acceptanceToken: String): CredentialResponse {
+    val accessInfo = verifyAndParseToken(acceptanceToken, TokenTarget.DEFERRED_CREDENTIAL) ?: throw DeferredCredentialError(CredentialErrorCode.invalid_token, message = "Invalid acceptance token")
+    val sessionId = accessInfo[JWTClaims.Payload.subject]!!.jsonPrimitive.content
+    val credentialId = accessInfo[JWTClaims.Payload.jwtID]!!.jsonPrimitive.content
+    val session = getVerifiedSession(sessionId) ?: throw DeferredCredentialError(CredentialErrorCode.invalid_token, "Session not found for given access token, or session expired.")
+    // issue credential for credential request
+    return createCredentialResponseFor(getDeferredCredential(credentialId), session)
+  }
+
+  override fun verifyAndParseToken(token: String, target: TokenTarget): JsonObject? {
+    return super.verifyAndParseToken(token, target)?.let {
+      if(target == TokenTarget.DEFERRED_CREDENTIAL && !it.containsKey(JWTClaims.Payload.jwtID))
+        null
+      else it
+    }
+  }
+
+  private fun createDeferredCredentialToken(session: AuthorizationSession, credentialResult: CredentialResult)
+    = generateToken(session.id, TokenTarget.DEFERRED_CREDENTIAL,
+      credentialResult.credentialId ?: throw Exception("credentialId must not be null, if credential issuance is deferred."))
+
+  private fun createCredentialResponseFor(credentialResult: CredentialResult, session: AuthorizationSession): CredentialResponse {
+    return credentialResult.credential?.let {
+      CredentialResponse.success(credentialResult.format, it)
+    } ?: generateProofOfPossessionNonceFor(session).let { updatedSession ->
+      CredentialResponse.deferred(
+        credentialResult.format,
+        createDeferredCredentialToken(session, credentialResult),
+        updatedSession.cNonce,
+        updatedSession.expirationTimestamp - Clock.System.now().epochSeconds
+      )
+    }
   }
 
   private fun validateProofOfPossesion(credentialRequest: CredentialRequest): Boolean {
     if(credentialRequest.proof?.proofType != ProofType.jwt || credentialRequest.proof.jwt == null)
       return false
-    return verifyToken(TokenTarget.PROOF_OF_POSSESSION, credentialRequest.proof.jwt)
+    return verifyTokenSignature(TokenTarget.PROOF_OF_POSSESSION, credentialRequest.proof.jwt)
   }
 
   fun getCIProviderMetadataUrl(): String {

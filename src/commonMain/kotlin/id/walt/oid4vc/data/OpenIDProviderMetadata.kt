@@ -103,6 +103,7 @@ open class OpenIDProviderMetadata(
   @SerialName(CREDENTIAL_ENDPOINT) val credentialEndpoint: String? = null,
   @SerialName(CREDENTIALS_SUPPORTED) @Serializable(CredentialSupportedListSerializer::class) val credentialsSupported: List<CredentialSupported>? = null,
   @SerialName(BATCH_CREDENTIAL_ENDPOINT) val batchCredentialEndpoint: String? = null,
+  @SerialName(DEFERRED_CREDENTIAL_ENDPOINT) val deferredCredentialEndpoint: String? = null,
   @SerialName(AUTHORIZATION_SERVER) val authorizationServer: String? = null,
   @SerialName(DISPLAY) @Serializable(DisplayPropertiesListSerializer::class) val display: List<DisplayProperties>? = null,
   override val customParameters: Map<String, JsonElement> = mapOf()

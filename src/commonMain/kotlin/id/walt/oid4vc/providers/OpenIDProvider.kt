@@ -13,10 +13,7 @@ import io.ktor.http.*
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.plus
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.*
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 
 abstract class OpenIDProvider(
   val baseUrl: String,
@@ -30,14 +27,22 @@ abstract class OpenIDProvider(
     }.buildString()
   }
 
-  protected open fun generateToken(sub: String, target: TokenTarget): String {
-    return signToken(target, buildJsonObject { put(JWTClaims.Payload.subject, sub); put(JWTClaims.Payload.audience, target.name) })
+  protected open fun generateToken(sub: String, audience: TokenTarget, tokenId: String? = null): String {
+    return signToken(audience, buildJsonObject {
+      put(JWTClaims.Payload.subject, sub);
+      put(JWTClaims.Payload.issuer, metadata.issuer)
+      put(JWTClaims.Payload.audience, audience.name)
+      tokenId?.let { put(JWTClaims.Payload.jwtID, it) }
+    })
   }
 
   protected open fun verifyAndParseToken(token: String, target: TokenTarget): JsonObject? {
-    if(verifyToken(target, token)) {
+    if(verifyTokenSignature(target, token)) {
       val payload = parseTokenPayload(token)
-      if(payload.keys.containsAll(setOf(JWTClaims.Payload.subject, JWTClaims.Payload.audience)) && payload[JWTClaims.Payload.audience]!!.jsonPrimitive.content == target.name) {
+      if(payload.keys.containsAll(setOf(JWTClaims.Payload.subject, JWTClaims.Payload.audience, JWTClaims.Payload.issuer)) &&
+          payload[JWTClaims.Payload.audience]!!.jsonPrimitive.content == target.name &&
+          payload[JWTClaims.Payload.issuer]!!.jsonPrimitive.content == metadata.issuer
+        ) {
         return payload
       }
     }

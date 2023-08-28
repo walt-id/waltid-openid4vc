@@ -6,11 +6,13 @@ import id.walt.model.DidMethod
 import id.walt.model.DidUrl
 import id.walt.oid4vc.data.*
 import id.walt.oid4vc.definitions.JWTClaims
+import id.walt.oid4vc.interfaces.CredentialResult
 import id.walt.oid4vc.providers.*
 import id.walt.oid4vc.requests.AuthorizationRequest
 import id.walt.oid4vc.requests.CredentialRequest
 import id.walt.oid4vc.requests.TokenRequest
 import id.walt.oid4vc.responses.CredentialErrorCode
+import id.walt.oid4vc.util.randomUUID
 import id.walt.services.did.DidService
 import id.walt.services.jwt.JwtService
 import id.walt.services.key.KeyService
@@ -48,15 +50,31 @@ class CITestProvider(): OpenIDCredentialIssuer(
   private val CI_TOKEN_KEY = KeyService.getService().generate(KeyAlgorithm.RSA)
   private val CI_DID_KEY = KeyService.getService().generate(KeyAlgorithm.EdDSA_Ed25519)
   val CI_ISSUER_DID = DidService.create(DidMethod.key, CI_DID_KEY.id)
+  var deferIssuance = false
+  val deferredCredentialRequests = mutableMapOf<String, CredentialRequest>()
   override fun getSession(id: String): AuthorizationSession? = authSessions[id]
   override fun putSession(id: String, session: AuthorizationSession) = authSessions.put(id, session)
   override fun removeSession(id: String) = authSessions.remove(id)
   override fun signToken(target: TokenTarget, payload: JsonObject, header: JsonObject?, keyId: String?)
     = JwtService.getService().sign(keyId ?: CI_TOKEN_KEY.id, payload.toString())
 
-  override fun verifyToken(target: TokenTarget, token: String)
+  override fun verifyTokenSignature(target: TokenTarget, token: String)
       = JwtService.getService().verify(token).verified
-  override fun generateCredentialFor(credentialRequest: CredentialRequest): JsonElement {
+  override fun generateCredential(credentialRequest: CredentialRequest): CredentialResult {
+    if (deferIssuance) return CredentialResult(credentialRequest.format, null, randomUUID()).also {
+      deferredCredentialRequests[it.credentialId!!] = credentialRequest
+    }
+    return doGenerateCredential(credentialRequest)
+  }
+
+  override fun getDeferredCredential(credentialID: String): CredentialResult {
+    if(deferredCredentialRequests.containsKey(credentialID)) {
+      return doGenerateCredential(deferredCredentialRequests[credentialID]!!)
+    }
+    throw DeferredCredentialError(CredentialErrorCode.invalid_request, message = "Invalid credential ID given")
+  }
+
+  private fun doGenerateCredential(credentialRequest: CredentialRequest): CredentialResult {
     if(credentialRequest.format == CredentialFormat.mso_mdoc.value) throw CredentialError(credentialRequest, CredentialErrorCode.unsupported_credential_format)
     val types = credentialRequest.types ?: credentialRequest.credentialDefinition?.types ?: throw CredentialError(credentialRequest, CredentialErrorCode.unsupported_credential_type)
     val proofHeader = credentialRequest.proof?.jwt?.let { parseTokenHeader(it) } ?: throw CredentialError(credentialRequest, CredentialErrorCode.invalid_or_missing_proof, message = "Proof must be JWT proof")
@@ -70,7 +88,7 @@ class CITestProvider(): OpenIDCredentialIssuer(
         CredentialFormat.ldp_vc.value -> Json.decodeFromString<JsonObject>(it)
         else -> JsonPrimitive(it)
       }
-    }
+    }.let { CredentialResult(credentialRequest.format, it) }
   }
 
   private fun resolveDIDFor(keyId: String): String {
@@ -133,14 +151,26 @@ class CITestProvider(): OpenIDCredentialIssuer(
         }
         post("/credential") {
           val accessToken = call.request.header("Authorization")?.substringAfter(" ")
-          if(accessToken.isNullOrEmpty() || !verifyToken(TokenTarget.ACCESS, accessToken)) {
+          if(accessToken.isNullOrEmpty() || !verifyTokenSignature(TokenTarget.ACCESS, accessToken)) {
             call.respond(HttpStatusCode.Unauthorized)
           } else {
             val credReq = CredentialRequest.fromJSON(call.receive<JsonObject>())
             try {
-              call.respond(generateCredentialResponse(credReq, accessToken))
+              call.respond(generateCredentialResponse(credReq, accessToken).toJSON())
             } catch (exc: CredentialError) {
               call.respond(HttpStatusCode.BadRequest, "${exc.errorCode}: ${exc.message ?: ""}")
+            }
+          }
+        }
+        post("/credential_deferred") {
+          val accessToken = call.request.header("Authorization")?.substringAfter(" ")
+          if(accessToken.isNullOrEmpty() || !verifyTokenSignature(TokenTarget.DEFERRED_CREDENTIAL, accessToken)) {
+            call.respond(HttpStatusCode.Unauthorized)
+          } else {
+            try {
+              call.respond(generateDeferredCredentialResponse(accessToken).toJSON())
+            } catch (exc: DeferredCredentialError) {
+              call.respond(HttpStatusCode.BadRequest, "${exc.errorCode}: ${exc.message}")
             }
           }
         }

@@ -9,6 +9,7 @@ const val PUSHED_AUTHORIZATION_REQUEST_ENDPOINT = "pushed_authorization_request_
 const val CREDENTIAL_ENDPOINT = "credential_endpoint"
 const val CREDENTIAL_ISSUER = "credential_issuer"
 const val BATCH_CREDENTIAL_ENDPOINT = "batch_credential_endpoint"
+const val DEFERRED_CREDENTIAL_ENDPOINT = "deferred_credential_endpoint"
 const val REGISTRATION_ENDPOINT = "registration_endpoint"
 const val CREDENTIALS_SUPPORTED = "credentials_supported"
 const val AUTHORIZATION_SERVER = "authorization_server"

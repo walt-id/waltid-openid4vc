@@ -292,8 +292,9 @@ class CI_JVM_Test: AnnotationSpec() {
     tokenResp.accessToken shouldNotBe null
     tokenResp.cNonce shouldNotBe null
 
-    // 5. Call credential endpoint with access token, to receive credential
+    // 5a. Call credential endpoint with access token, to receive credential (synchronous issuance)
     providerMetadata.credentialEndpoint shouldNotBe null
+    ciTestProvider.deferIssuance = false
 
     val credReq = CredentialRequest.forAuthorizationDetails(
       pushedAuthReq.authorizationDetails!!.first(),
@@ -306,6 +307,7 @@ class CI_JVM_Test: AnnotationSpec() {
     }.body<JsonObject>().let { CredentialResponse.fromJSON(it) }
 
     credentialResp.isSuccess shouldBe true
+    credentialResp.isDeferred shouldBe false
     credentialResp.format!! shouldBe CredentialFormat.jwt_vc_json.value
     credentialResp.credential.shouldBeInstanceOf<JsonPrimitive>()
     val credential = VerifiableCredential.fromString(credentialResp.credential!!.jsonPrimitive.content)
@@ -313,6 +315,32 @@ class CI_JVM_Test: AnnotationSpec() {
     credential.issuer?.id shouldBe ciTestProvider.CI_ISSUER_DID
     credential.credentialSubject?.id shouldBe credentialWallet.TEST_DID
     Auditor.getService().verify(credential, listOf(SignaturePolicy())).result shouldBe true
+
+    // 5b. test deferred (asynchronous) credential issuance
+    providerMetadata.deferredCredentialEndpoint shouldNotBe null
+    ciTestProvider.deferIssuance = true
+
+    val deferredCredResp = ktorClient.post(providerMetadata.credentialEndpoint!!) {
+      contentType(ContentType.Application.Json)
+      bearerAuth(tokenResp.accessToken!!)
+      setBody(credReq.toJSON())
+    }.body<JsonObject>().let { CredentialResponse.fromJSON(it) }
+
+    deferredCredResp.isSuccess shouldBe true
+    deferredCredResp.isDeferred shouldBe true
+    deferredCredResp.acceptanceToken shouldNotBe null
+    deferredCredResp.credential shouldBe null
+
+    val deferredCredResp2 = ktorClient.post(providerMetadata.deferredCredentialEndpoint!!) {
+      bearerAuth(deferredCredResp.acceptanceToken!!)
+    }.body<JsonObject>().let { CredentialResponse.fromJSON(it) }
+    deferredCredResp2.isSuccess shouldBe true
+    deferredCredResp2.isDeferred shouldBe false
+    val deferredCredential = VerifiableCredential.fromString(deferredCredResp2.credential!!.jsonPrimitive.content)
+    println("Issued deferred credential: $deferredCredential")
+    deferredCredential.issuer?.id shouldBe ciTestProvider.CI_ISSUER_DID
+    deferredCredential.credentialSubject?.id shouldBe credentialWallet.TEST_DID
+    Auditor.getService().verify(deferredCredential, listOf(SignaturePolicy())).result shouldBe true
   }
 
   @Test

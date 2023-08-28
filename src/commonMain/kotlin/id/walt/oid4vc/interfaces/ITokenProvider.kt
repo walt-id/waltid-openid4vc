@@ -18,7 +18,7 @@ interface ITokenProvider {
    * Verifies the signature of the given _JWT_ [token], ensuring the appropriate key and algorithm for the given token [target] was used.
    * @return Returns `true` if the signature is valid or `false` otherwise
    */
-  fun verifyToken(target: TokenTarget, token: String): Boolean
+  fun verifyTokenSignature(target: TokenTarget, token: String): Boolean
 
   @OptIn(ExperimentalEncodingApi::class)
   fun parseTokenPayload(token: String): JsonObject {
