@@ -4,6 +4,7 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Serializer
+import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.SetSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
@@ -37,4 +38,11 @@ object GrantTypeSetSerializer: KSerializer<Set<GrantType>> {
   override val descriptor = internalSerializer.descriptor
   override fun deserialize(decoder: Decoder) = internalSerializer.deserialize(decoder)
   override fun serialize(encoder: Encoder, value: Set<GrantType>) = internalSerializer.serialize(encoder, value)
+}
+
+object GrantTypeDetailsMapSerializer: KSerializer<Map<GrantType, GrantDetails>> {
+  val internalSerializer = MapSerializer(GrantTypeSerializer, GrantDetails.serializer())
+  override val descriptor = internalSerializer.descriptor
+  override fun deserialize(decoder: Decoder) = internalSerializer.deserialize(decoder)
+  override fun serialize(encoder: Encoder, value: Map<GrantType, GrantDetails>) = internalSerializer.serialize(encoder, value)
 }
