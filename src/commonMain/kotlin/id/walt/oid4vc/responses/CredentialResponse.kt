@@ -3,8 +3,15 @@ package id.walt.oid4vc.responses
 import id.walt.oid4vc.data.JsonDataObject
 import id.walt.oid4vc.data.JsonDataObjectFactory
 import id.walt.oid4vc.data.JsonDataObjectSerializer
+import id.walt.oid4vc.requests.CredentialRequest
+import id.walt.oid4vc.requests.CredentialRequestSerializer
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.*
 
 @Serializable
@@ -53,4 +60,11 @@ enum class CredentialErrorCode {
   unsupported_credential_type,
   unsupported_credential_format,
   invalid_or_missing_proof
+}
+
+object CredentialResponseListSerializer: KSerializer<List<CredentialResponse>> {
+  private val internalSerializer = ListSerializer(CredentialResponseSerializer)
+  override val descriptor: SerialDescriptor = internalSerializer.descriptor
+  override fun deserialize(decoder: Decoder): List<CredentialResponse> = internalSerializer.deserialize(decoder)
+  override fun serialize(encoder: Encoder, value: List<CredentialResponse>) = internalSerializer.serialize(encoder, value)
 }

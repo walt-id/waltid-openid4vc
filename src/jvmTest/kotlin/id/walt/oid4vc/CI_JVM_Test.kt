@@ -18,8 +18,10 @@ import id.walt.oid4vc.providers.CredentialWallet
 import id.walt.oid4vc.providers.CredentialWalletConfig
 import id.walt.oid4vc.providers.OpenIDCredentialIssuer
 import id.walt.oid4vc.requests.AuthorizationRequest
+import id.walt.oid4vc.requests.BatchCredentialRequest
 import id.walt.oid4vc.requests.CredentialRequest
 import id.walt.oid4vc.requests.TokenRequest
+import id.walt.oid4vc.responses.BatchCredentialResponse
 import id.walt.oid4vc.responses.CredentialResponse
 import id.walt.oid4vc.responses.PushedAuthorizationResponse
 import id.walt.oid4vc.responses.TokenResponse
@@ -249,6 +251,10 @@ class CI_JVM_Test: AnnotationSpec() {
         type = OPENID_CREDENTIAL_AUTHORIZATION_TYPE,
         format = CredentialFormat.jwt_vc_json.value,
         types = listOf("VerifiableCredential", "VerifiableId")
+      ), AuthorizationDetails(
+        type = OPENID_CREDENTIAL_AUTHORIZATION_TYPE,
+        format = CredentialFormat.jwt_vc_json.value,
+        types = listOf("VerifiableCredential", "VerifiableAttestation", "VerifiableDiploma")
       ))
     )
     val pushedAuthResp = ktorClient.submitForm(
@@ -295,10 +301,11 @@ class CI_JVM_Test: AnnotationSpec() {
     // 5a. Call credential endpoint with access token, to receive credential (synchronous issuance)
     providerMetadata.credentialEndpoint shouldNotBe null
     ciTestProvider.deferIssuance = false
+    var nonce = tokenResp.cNonce!!
 
     val credReq = CredentialRequest.forAuthorizationDetails(
       pushedAuthReq.authorizationDetails!!.first(),
-      credentialWallet.generateDidProof(credentialWallet.TEST_DID, ciTestProvider.baseUrl, tokenResp.cNonce!!))
+      credentialWallet.generateDidProof(credentialWallet.TEST_DID, ciTestProvider.baseUrl, nonce))
 
     val credentialResp = ktorClient.post(providerMetadata.credentialEndpoint!!) {
       contentType(ContentType.Application.Json)
@@ -316,6 +323,8 @@ class CI_JVM_Test: AnnotationSpec() {
     credential.credentialSubject?.id shouldBe credentialWallet.TEST_DID
     Auditor.getService().verify(credential, listOf(SignaturePolicy())).result shouldBe true
 
+    nonce = credentialResp.cNonce ?: nonce
+
     // 5b. test deferred (asynchronous) credential issuance
     providerMetadata.deferredCredentialEndpoint shouldNotBe null
     ciTestProvider.deferIssuance = true
@@ -331,6 +340,8 @@ class CI_JVM_Test: AnnotationSpec() {
     deferredCredResp.acceptanceToken shouldNotBe null
     deferredCredResp.credential shouldBe null
 
+    nonce = deferredCredResp.cNonce ?: nonce
+
     val deferredCredResp2 = ktorClient.post(providerMetadata.deferredCredentialEndpoint!!) {
       bearerAuth(deferredCredResp.acceptanceToken!!)
     }.body<JsonObject>().let { CredentialResponse.fromJSON(it) }
@@ -341,6 +352,43 @@ class CI_JVM_Test: AnnotationSpec() {
     deferredCredential.issuer?.id shouldBe ciTestProvider.CI_ISSUER_DID
     deferredCredential.credentialSubject?.id shouldBe credentialWallet.TEST_DID
     Auditor.getService().verify(deferredCredential, listOf(SignaturePolicy())).result shouldBe true
+
+    nonce = deferredCredResp2.cNonce ?: nonce
+
+    // 5c. test batch credential issuance (with one synchronous and one deferred credential)
+    providerMetadata.batchCredentialEndpoint shouldNotBe null
+    ciTestProvider.deferIssuance = false
+
+    val proof = credentialWallet.generateDidProof(credentialWallet.TEST_DID, ciTestProvider.baseUrl, nonce)
+    val batchReq = BatchCredentialRequest(pushedAuthReq.authorizationDetails!!.map {
+      CredentialRequest.forAuthorizationDetails(it, proof)
+    })
+
+    val batchResp = ktorClient.post(providerMetadata.batchCredentialEndpoint!!) {
+      contentType(ContentType.Application.Json)
+      bearerAuth(tokenResp.accessToken!!)
+      setBody(batchReq.toJSON())
+    }.body<JsonObject>().let { BatchCredentialResponse.fromJSON(it) }
+
+    batchResp.isSuccess shouldBe true
+    batchResp.credentialResponses!!.size shouldBe 2
+    batchResp.credentialResponses!![0].isDeferred shouldBe false
+    batchResp.credentialResponses!![0].credential shouldNotBe null
+    batchResp.credentialResponses!![1].isDeferred shouldBe true
+    batchResp.credentialResponses!![1].acceptanceToken shouldNotBe null
+    val batchCred1 = batchResp.credentialResponses!![0].credential!!.let { VerifiableCredential.fromString(it.jsonPrimitive.content) }
+    batchCred1.type.last() shouldBe "VerifiableId"
+    Auditor.getService().verify(batchCred1, listOf(SignaturePolicy())).result shouldBe true
+
+    val batchResp2 = ktorClient.post(providerMetadata.deferredCredentialEndpoint!!) {
+      bearerAuth(batchResp.credentialResponses!![1].acceptanceToken!!)
+    }.body<JsonObject>().let { CredentialResponse.fromJSON(it) }
+    batchResp2.isSuccess shouldBe true
+    batchResp2.isDeferred shouldBe false
+    batchResp2.credential shouldNotBe null
+    val batchCred2 = batchResp2.credential!!.let { VerifiableCredential.fromString(it.jsonPrimitive.content) }
+    batchCred2.type.last() shouldBe "VerifiableDiploma"
+    Auditor.getService().verify(batchCred2, listOf(SignaturePolicy())).result shouldBe true
   }
 
   @Test

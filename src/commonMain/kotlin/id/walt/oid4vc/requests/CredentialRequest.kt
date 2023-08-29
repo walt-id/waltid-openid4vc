@@ -1,8 +1,13 @@
 package id.walt.oid4vc.requests
 
 import id.walt.oid4vc.data.*
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.*
 
 @Serializable
@@ -30,3 +35,10 @@ data class CredentialRequest(
 }
 
 object CredentialRequestSerializer : JsonDataObjectSerializer<CredentialRequest>(CredentialRequest.serializer())
+
+object CredentialRequestListSerializer: KSerializer<List<CredentialRequest>> {
+  private val internalSerializer = ListSerializer(CredentialRequestSerializer)
+  override val descriptor: SerialDescriptor = internalSerializer.descriptor
+  override fun deserialize(decoder: Decoder): List<CredentialRequest> = internalSerializer.deserialize(decoder)
+  override fun serialize(encoder: Encoder, value: List<CredentialRequest>) = internalSerializer.serialize(encoder, value)
+}

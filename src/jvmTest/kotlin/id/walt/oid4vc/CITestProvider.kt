@@ -9,6 +9,7 @@ import id.walt.oid4vc.definitions.JWTClaims
 import id.walt.oid4vc.interfaces.CredentialResult
 import id.walt.oid4vc.providers.*
 import id.walt.oid4vc.requests.AuthorizationRequest
+import id.walt.oid4vc.requests.BatchCredentialRequest
 import id.walt.oid4vc.requests.CredentialRequest
 import id.walt.oid4vc.requests.TokenRequest
 import id.walt.oid4vc.responses.CredentialErrorCode
@@ -42,6 +43,11 @@ class CITestProvider(): OpenIDCredentialIssuer(
           cryptographicBindingMethodsSupported = setOf("did"), cryptographicSuitesSupported = setOf("ES256K"),
           types = listOf("VerifiableCredential", "VerifiableId"),
           customParameters = mapOf("foo" to JsonPrimitive("bar"))
+        ),
+        CredentialSupported(
+          "jwt_vc_json", "VerifiableDiploma",
+          cryptographicBindingMethodsSupported = setOf("did"), cryptographicSuitesSupported = setOf("ES256K"),
+          types = listOf("VerifiableCredential", "VerifiableAttestation", "VerifiableDiploma")
         )
       )
     )
@@ -64,7 +70,10 @@ class CITestProvider(): OpenIDCredentialIssuer(
     if (deferIssuance) return CredentialResult(credentialRequest.format, null, randomUUID()).also {
       deferredCredentialRequests[it.credentialId!!] = credentialRequest
     }
-    return doGenerateCredential(credentialRequest)
+    return doGenerateCredential(credentialRequest).also {
+      // for testing purposes: defer next credential if multiple credentials are issued
+      deferIssuance = !deferIssuance
+    }
   }
 
   override fun getDeferredCredential(credentialID: String): CredentialResult {
@@ -150,7 +159,7 @@ class CITestProvider(): OpenIDCredentialIssuer(
           }
         }
         post("/credential") {
-          val accessToken = call.request.header("Authorization")?.substringAfter(" ")
+          val accessToken = call.request.header(HttpHeaders.Authorization)?.substringAfter(" ")
           if(accessToken.isNullOrEmpty() || !verifyTokenSignature(TokenTarget.ACCESS, accessToken)) {
             call.respond(HttpStatusCode.Unauthorized)
           } else {
@@ -158,19 +167,32 @@ class CITestProvider(): OpenIDCredentialIssuer(
             try {
               call.respond(generateCredentialResponse(credReq, accessToken).toJSON())
             } catch (exc: CredentialError) {
-              call.respond(HttpStatusCode.BadRequest, "${exc.errorCode}: ${exc.message ?: ""}")
+              call.respond(HttpStatusCode.BadRequest, exc.toCredentialErrorResponse().toJSON())
             }
           }
         }
         post("/credential_deferred") {
-          val accessToken = call.request.header("Authorization")?.substringAfter(" ")
+          val accessToken = call.request.header(HttpHeaders.Authorization)?.substringAfter(" ")
           if(accessToken.isNullOrEmpty() || !verifyTokenSignature(TokenTarget.DEFERRED_CREDENTIAL, accessToken)) {
             call.respond(HttpStatusCode.Unauthorized)
           } else {
             try {
               call.respond(generateDeferredCredentialResponse(accessToken).toJSON())
             } catch (exc: DeferredCredentialError) {
-              call.respond(HttpStatusCode.BadRequest, "${exc.errorCode}: ${exc.message}")
+              call.respond(HttpStatusCode.BadRequest, exc.toCredentialErrorResponse().toJSON())
+            }
+          }
+        }
+        post("/batch_credential") {
+          val accessToken = call.request.header(HttpHeaders.Authorization)?.substringAfter(" ")
+          if(accessToken.isNullOrEmpty() || ! verifyTokenSignature(TokenTarget.ACCESS, accessToken)) {
+            call.respond(HttpStatusCode.Unauthorized)
+          } else {
+            val req = BatchCredentialRequest.fromJSON(call.receive())
+            try {
+              call.respond(generateBatchCredentialResponse(req, accessToken).toJSON())
+            } catch (exc: BatchCredentialError) {
+              call.respond(HttpStatusCode.BadRequest, exc.toBatchCredentialErrorResponse().toJSON())
             }
           }
         }

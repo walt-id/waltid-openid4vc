@@ -6,6 +6,7 @@ import id.walt.oid4vc.definitions.OPENID_CREDENTIAL_AUTHORIZATION_TYPE
 import id.walt.oid4vc.interfaces.CredentialResult
 import id.walt.oid4vc.interfaces.ICredentialProvider
 import id.walt.oid4vc.requests.AuthorizationRequest
+import id.walt.oid4vc.requests.BatchCredentialRequest
 import id.walt.oid4vc.requests.CredentialRequest
 import id.walt.oid4vc.responses.*
 import id.walt.oid4vc.util.randomUUID
@@ -84,7 +85,7 @@ abstract class OpenIDCredentialIssuer(
     )
   }
 
-  private fun createCredentialError(credReq: CredentialRequest?, session: AuthorizationSession,
+  private fun createCredentialError(credReq: CredentialRequest, session: AuthorizationSession,
                                     errorCode: CredentialErrorCode, message: String?) =
     CredentialError(credReq, errorCode, null,
       // renew c_nonce for this session, if the error was invalid_or_missing_proof
@@ -96,12 +97,15 @@ abstract class OpenIDCredentialIssuer(
     val accessInfo = verifyAndParseToken(accessToken, TokenTarget.ACCESS) ?: throw CredentialError(credentialRequest, CredentialErrorCode.invalid_token, message = "Invalid access token")
     val sessionId = accessInfo[JWTClaims.Payload.subject]!!.jsonPrimitive.content
     val session = getVerifiedSession(sessionId) ?: throw CredentialError(credentialRequest, CredentialErrorCode.invalid_token, "Session not found for given access token, or session expired.")
+    return doGenerateCredentialResponseFor(credentialRequest, session)
+  }
 
+  private fun doGenerateCredentialResponseFor(credentialRequest: CredentialRequest, session: AuthorizationSession): CredentialResponse {
     if(credentialRequest.format.isNullOrEmpty()) {
       throw createCredentialError(credentialRequest, session, CredentialErrorCode.invalid_request, "Missing required parameters on credential request")
     }
-
-    if(credentialRequest.proof == null || !validateProofOfPossesion(credentialRequest)) {
+    val nonce = session.cNonce ?: throw createCredentialError(credentialRequest, session, CredentialErrorCode.invalid_request, "Session invalid")
+    if(credentialRequest.proof == null || !validateProofOfPossesion(credentialRequest, nonce)) {
       throw createCredentialError(credentialRequest, session, CredentialErrorCode.invalid_or_missing_proof, "Invalid proof of possession")
     }
 
@@ -124,6 +128,27 @@ abstract class OpenIDCredentialIssuer(
     val session = getVerifiedSession(sessionId) ?: throw DeferredCredentialError(CredentialErrorCode.invalid_token, "Session not found for given access token, or session expired.")
     // issue credential for credential request
     return createCredentialResponseFor(getDeferredCredential(credentialId), session)
+  }
+
+  open fun generateBatchCredentialResponse(batchCredentialRequest: BatchCredentialRequest, accessToken: String): BatchCredentialResponse {
+    val accessInfo = verifyAndParseToken(accessToken, TokenTarget.ACCESS) ?: throw BatchCredentialError(batchCredentialRequest, CredentialErrorCode.invalid_token, message = "Invalid access token")
+    val sessionId = accessInfo[JWTClaims.Payload.subject]!!.jsonPrimitive.content
+    val session = getVerifiedSession(sessionId) ?: throw BatchCredentialError(batchCredentialRequest, CredentialErrorCode.invalid_token, "Session not found for given access token, or session expired.")
+
+    try {
+      val responses = batchCredentialRequest.credentialRequests.map {
+        doGenerateCredentialResponseFor(it, session)
+      }
+      return generateProofOfPossessionNonceFor(session).let { updatedSession ->
+        BatchCredentialResponse.success(
+          responses,
+          updatedSession.cNonce,
+          updatedSession.expirationTimestamp - Clock.System.now().epochSeconds
+        )
+      }
+    } catch (error: CredentialError) {
+      throw BatchCredentialError(batchCredentialRequest, error.errorCode, error.errorUri, error.cNonce, error.cNonceExpiresIn, error.message)
+    }
   }
 
   override fun verifyAndParseToken(token: String, target: TokenTarget): JsonObject? {
@@ -151,10 +176,13 @@ abstract class OpenIDCredentialIssuer(
     }
   }
 
-  private fun validateProofOfPossesion(credentialRequest: CredentialRequest): Boolean {
+  private fun validateProofOfPossesion(credentialRequest: CredentialRequest, nonce: String): Boolean {
     if(credentialRequest.proof?.proofType != ProofType.jwt || credentialRequest.proof.jwt == null)
       return false
-    return verifyTokenSignature(TokenTarget.PROOF_OF_POSSESSION, credentialRequest.proof.jwt)
+    return verifyTokenSignature(TokenTarget.PROOF_OF_POSSESSION, credentialRequest.proof.jwt) &&
+        credentialRequest.proof.jwt.let {
+          parseTokenPayload(it)
+        }[JWTClaims.Payload.nonce]?.jsonPrimitive?.content == nonce
   }
 
   fun getCIProviderMetadataUrl(): String {
