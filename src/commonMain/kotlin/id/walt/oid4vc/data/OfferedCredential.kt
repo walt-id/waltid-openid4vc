@@ -18,7 +18,11 @@ data class OfferedCredential(
     override fun toJSON() = Json.encodeToJsonElement(OfferedCredentialSerializer, this).jsonObject
 
     companion object: JsonDataObjectFactory<OfferedCredential>() {
-        override fun fromJSON(jsonObject: JsonObject) = Json.decodeFromJsonElement(OfferedCredentialSerializer, jsonObject)
+      override fun fromJSON(jsonObject: JsonObject) = Json.decodeFromJsonElement(OfferedCredentialSerializer, jsonObject)
+      fun fromProviderMetadata(credential: CredentialSupported) = OfferedCredential(
+        credential.format, credential.types, credential.docType,
+        JsonLDCredentialDefinition(credential.context, credential.types), credential.customParameters
+      )
     }
 }
 
