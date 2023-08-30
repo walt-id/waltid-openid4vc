@@ -40,6 +40,12 @@ data class AuthorizationDetails(
 
   companion object: JsonDataObjectFactory<AuthorizationDetails>() {
     override fun fromJSON(jsonObject: JsonObject): AuthorizationDetails = Json.decodeFromJsonElement(AuthorizationDetailsSerializer, jsonObject)
+    fun fromOfferedCredential(offeredCredential: OfferedCredential) = AuthorizationDetails(
+      OPENID_CREDENTIAL_AUTHORIZATION_TYPE,
+      offeredCredential.format, offeredCredential.types, null,
+      offeredCredential.docType, null,
+      offeredCredential.credentialDefinition, offeredCredential.customParameters
+    )
   }
 }
 

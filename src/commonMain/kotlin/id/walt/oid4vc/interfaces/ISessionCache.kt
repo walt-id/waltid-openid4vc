@@ -1,7 +1,5 @@
 package id.walt.oid4vc.interfaces
 
-import id.walt.oid4vc.providers.AuthorizationSession
-
 interface ISessionCache<T> {
   /**
    * Returns the session with the given [id] from the session cache, or `null` if it is not present in the cache.

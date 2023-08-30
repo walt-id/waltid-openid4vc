@@ -17,10 +17,7 @@ import id.walt.oid4vc.definitions.RESPONSE_TYPE_CODE
 import id.walt.oid4vc.providers.CredentialWallet
 import id.walt.oid4vc.providers.CredentialWalletConfig
 import id.walt.oid4vc.providers.OpenIDCredentialIssuer
-import id.walt.oid4vc.requests.AuthorizationRequest
-import id.walt.oid4vc.requests.BatchCredentialRequest
-import id.walt.oid4vc.requests.CredentialRequest
-import id.walt.oid4vc.requests.TokenRequest
+import id.walt.oid4vc.requests.*
 import id.walt.oid4vc.responses.BatchCredentialResponse
 import id.walt.oid4vc.responses.CredentialResponse
 import id.walt.oid4vc.responses.PushedAuthorizationResponse
@@ -389,6 +386,21 @@ class CI_JVM_Test: AnnotationSpec() {
     val batchCred2 = batchResp2.credential!!.let { VerifiableCredential.fromString(it.jsonPrimitive.content) }
     batchCred2.type.last() shouldBe "VerifiableDiploma"
     Auditor.getService().verify(batchCred2, listOf(SignaturePolicy())).result shouldBe true
+  }
+
+  @Test
+  fun testCredentialOffer() {
+    // as CI provider, initialize credential offer for user
+    val issuanceSession = ciTestProvider.initializeCredentialOffer(
+      CredentialOffer.Builder(ciTestProvider.baseUrl).addOfferedCredential("VerifiableId"),
+      600, allowPreAuthorized = false
+    )
+    issuanceSession.credentialOffer shouldNotBe null
+    val offerRequest = CredentialOfferRequest(issuanceSession.credentialOffer!!)
+    val offerUri = URLBuilder(credentialWallet.config.redirectUri!!).apply {
+      parameters.appendAll(parametersOf(offerRequest.toHttpParameters()))
+    }.buildString()
+    println("Offer URI: $offerUri")
   }
 
   @Test

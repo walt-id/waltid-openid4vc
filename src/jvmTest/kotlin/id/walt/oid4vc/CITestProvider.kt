@@ -52,14 +52,14 @@ class CITestProvider(): OpenIDCredentialIssuer(
       )
     )
 ) {
-  private val authSessions: MutableMap<String, AuthorizationSession> = mutableMapOf()
+  private val authSessions: MutableMap<String, IssuanceSession> = mutableMapOf()
   private val CI_TOKEN_KEY = KeyService.getService().generate(KeyAlgorithm.RSA)
   private val CI_DID_KEY = KeyService.getService().generate(KeyAlgorithm.EdDSA_Ed25519)
   val CI_ISSUER_DID = DidService.create(DidMethod.key, CI_DID_KEY.id)
   var deferIssuance = false
   val deferredCredentialRequests = mutableMapOf<String, CredentialRequest>()
-  override fun getSession(id: String): AuthorizationSession? = authSessions[id]
-  override fun putSession(id: String, session: AuthorizationSession) = authSessions.put(id, session)
+  override fun getSession(id: String): IssuanceSession? = authSessions[id]
+  override fun putSession(id: String, session: IssuanceSession) = authSessions.put(id, session)
   override fun removeSession(id: String) = authSessions.remove(id)
   override fun signToken(target: TokenTarget, payload: JsonObject, header: JsonObject?, keyId: String?)
     = JwtService.getService().sign(keyId ?: CI_TOKEN_KEY.id, payload.toString())
@@ -135,7 +135,7 @@ class CITestProvider(): OpenIDCredentialIssuer(
             val authResp = continueAuthorization(authSession)
             call.response.apply {
               status(HttpStatusCode.Found)
-              header(HttpHeaders.Location, URLBuilder(authSession.authorizationRequest.redirectUri!!).apply {
+              header(HttpHeaders.Location, URLBuilder(authSession.authorizationRequest!!.redirectUri!!).apply {
                 parameters.appendAll(parametersOf(authResp.toHttpParameters()))
               }.buildString())
             }

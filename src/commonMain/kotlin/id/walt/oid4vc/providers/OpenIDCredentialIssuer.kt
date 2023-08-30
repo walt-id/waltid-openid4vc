@@ -12,13 +12,15 @@ import id.walt.oid4vc.responses.*
 import id.walt.oid4vc.util.randomUUID
 import io.ktor.http.*
 import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.plus
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 abstract class OpenIDCredentialIssuer(
   baseUrl: String,
   override val config: CredentialIssuerConfig
-): OpenIDProvider(baseUrl), ICredentialProvider {
+): OpenIDProvider<IssuanceSession>(baseUrl), ICredentialProvider {
 
   protected open fun createDefaultProviderMetadata() = OpenIDProviderMetadata(
   issuer = "$baseUrl",
@@ -66,18 +68,54 @@ abstract class OpenIDCredentialIssuer(
   }
 
   override fun validateAuthorizationRequest(authorizationRequest: AuthorizationRequest): Boolean {
-    return authorizationRequest.authorizationDetails != null && authorizationRequest.authorizationDetails.any { isSupportedAuthorizationDetails(it) }
-  }
-
-  private fun generateProofOfPossessionNonceFor(session: AuthorizationSession): AuthorizationSession {
-    return session.apply {
-      cNonce = randomUUID()
-    }.also {
-      putSession(session.id, session)
+    return authorizationRequest.authorizationDetails != null && authorizationRequest.authorizationDetails.any {
+      isSupportedAuthorizationDetails(it)
     }
   }
 
-  override fun generateTokenResponse(session: AuthorizationSession): TokenResponse {
+  override fun initializeAuthorization(authorizationRequest: AuthorizationRequest, expiresIn: Int): IssuanceSession {
+    return if(authorizationRequest.issuerState.isNullOrEmpty()) {
+      if (!validateAuthorizationRequest(authorizationRequest)) {
+        throw AuthorizationError(authorizationRequest, AuthorizationErrorCode.invalid_request,
+          "No valid authorization details for credential issuance found on authorization request")
+      }
+      IssuanceSession(
+        randomUUID(), authorizationRequest,
+        Clock.System.now().plus(expiresIn, DateTimeUnit.SECOND).epochSeconds
+      )
+    }
+    else {
+      getVerifiedSession(authorizationRequest.issuerState)?.copy(authorizationRequest = authorizationRequest)
+        ?: throw AuthorizationError(authorizationRequest, AuthorizationErrorCode.invalid_request,
+          "No valid issuance session found for given issuer state")
+    }.also {
+      putSession(it.id, it)
+    }
+  }
+
+  open fun initializeCredentialOffer(credentialOfferBuilder: CredentialOffer.Builder, expiresIn: Int, allowPreAuthorized: Boolean, preAuthUserPin: String? = null): IssuanceSession {
+    val sessionId = randomUUID()
+    credentialOfferBuilder.addAuthorizationCodeGrant(sessionId)
+    if(allowPreAuthorized)
+      credentialOfferBuilder.addPreAuthorizedCodeGrant(generateToken(sessionId, TokenTarget.TOKEN), !preAuthUserPin.isNullOrEmpty())
+    return IssuanceSession(
+      sessionId, null,
+      Clock.System.now().plus(expiresIn, DateTimeUnit.SECOND).epochSeconds,
+      preAuthUserPin,
+      credentialOfferBuilder.build()).also {
+        putSession(it.id, it)
+    }
+  }
+
+  private fun generateProofOfPossessionNonceFor(session: IssuanceSession): IssuanceSession {
+    return session.copy(
+      cNonce = randomUUID()
+    ).also {
+      putSession(it.id, it)
+    }
+  }
+
+  override fun generateTokenResponse(session: IssuanceSession): TokenResponse {
     return super.generateTokenResponse(session).copy(
       cNonce = generateProofOfPossessionNonceFor(session).cNonce,
       cNonceExpiresIn = session.expirationTimestamp - Clock.System.now().epochSeconds
@@ -85,7 +123,7 @@ abstract class OpenIDCredentialIssuer(
     )
   }
 
-  private fun createCredentialError(credReq: CredentialRequest, session: AuthorizationSession,
+  private fun createCredentialError(credReq: CredentialRequest, session: IssuanceSession,
                                     errorCode: CredentialErrorCode, message: String?) =
     CredentialError(credReq, errorCode, null,
       // renew c_nonce for this session, if the error was invalid_or_missing_proof
@@ -100,7 +138,7 @@ abstract class OpenIDCredentialIssuer(
     return doGenerateCredentialResponseFor(credentialRequest, session)
   }
 
-  private fun doGenerateCredentialResponseFor(credentialRequest: CredentialRequest, session: AuthorizationSession): CredentialResponse {
+  private fun doGenerateCredentialResponseFor(credentialRequest: CredentialRequest, session: IssuanceSession): CredentialResponse {
     if(credentialRequest.format.isNullOrEmpty()) {
       throw createCredentialError(credentialRequest, session, CredentialErrorCode.invalid_request, "Missing required parameters on credential request")
     }
@@ -116,6 +154,9 @@ abstract class OpenIDCredentialIssuer(
     val types = credentialRequest.types ?: credentialRequest.credentialDefinition?.types
     if(!isCredentialTypeSupported(credentialRequest.format, types, credentialRequest.docType))
       throw createCredentialError(credentialRequest, session, CredentialErrorCode.unsupported_credential_type, "Credential type not supported")
+
+    // TODO: validate if requested credential was authorized
+    //  (by authorization details, or credential offer, or scope)
 
     // issue credential for credential request
     return createCredentialResponseFor(generateCredential(credentialRequest), session)
@@ -163,7 +204,7 @@ abstract class OpenIDCredentialIssuer(
     = generateToken(session.id, TokenTarget.DEFERRED_CREDENTIAL,
       credentialResult.credentialId ?: throw Exception("credentialId must not be null, if credential issuance is deferred."))
 
-  private fun createCredentialResponseFor(credentialResult: CredentialResult, session: AuthorizationSession): CredentialResponse {
+  private fun createCredentialResponseFor(credentialResult: CredentialResult, session: IssuanceSession): CredentialResponse {
     return credentialResult.credential?.let {
       CredentialResponse.success(credentialResult.format, it)
     } ?: generateProofOfPossessionNonceFor(session).let { updatedSession ->

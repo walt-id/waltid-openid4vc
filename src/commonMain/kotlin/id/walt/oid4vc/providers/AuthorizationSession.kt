@@ -7,11 +7,10 @@ import id.walt.oid4vc.responses.PushedAuthorizationResponse
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 
-data class AuthorizationSession(
-  val id: String,
-  val authorizationRequest: AuthorizationRequest,
-  val expirationTimestamp: Long,
-  var cNonce: String? = null
-) {
+abstract class AuthorizationSession {
+  abstract val id: String
+  abstract val authorizationRequest: AuthorizationRequest?
+  abstract val expirationTimestamp: Long
+  abstract val preAuthUserPin: String?
   val isExpired get() = expirationTimestamp < Clock.System.now().epochSeconds
 }

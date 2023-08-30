@@ -15,9 +15,9 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.plus
 import kotlinx.serialization.json.*
 
-abstract class OpenIDProvider(
+abstract class OpenIDProvider<S: AuthorizationSession>(
   val baseUrl: String,
-): ISessionCache<AuthorizationSession>, ITokenProvider {
+): ISessionCache<S>, ITokenProvider {
   abstract val metadata: OpenIDProviderMetadata
   abstract val config: OpenIDProviderConfig
 
@@ -49,7 +49,7 @@ abstract class OpenIDProvider(
     return null
   }
 
-  protected open fun generateAuthorizationCodeFor(session: AuthorizationSession): String {
+  protected open fun generateAuthorizationCodeFor(session: S): String {
     return generateToken(session.id, TokenTarget.TOKEN)
   }
 
@@ -59,27 +59,20 @@ abstract class OpenIDProvider(
 
   protected abstract fun validateAuthorizationRequest(authorizationRequest: AuthorizationRequest): Boolean
 
-  open fun initializeAuthorization(authorizationRequest: AuthorizationRequest, expiresIn: Int): AuthorizationSession {
-    if(!validateAuthorizationRequest(authorizationRequest)) {
-      throw AuthorizationError(authorizationRequest, AuthorizationErrorCode.invalid_request, "No valid authorization details for credential issuance found on authorization request")
-    }
-    return AuthorizationSession(randomUUID(), authorizationRequest, Clock.System.now().plus(expiresIn, DateTimeUnit.SECOND).epochSeconds).also {
-      putSession(it.id, it)
-    }
-  }
-  open fun continueAuthorization(authorizationSession: AuthorizationSession): AuthorizationResponse {
+  abstract fun initializeAuthorization(authorizationRequest: AuthorizationRequest, expiresIn: Int): S
+  open fun continueAuthorization(authorizationSession: S): AuthorizationResponse {
     val code = generateAuthorizationCodeFor(authorizationSession)
     return AuthorizationResponse.success(code)
   }
 
-  protected open fun generateTokenResponse(session: AuthorizationSession): TokenResponse {
+  protected open fun generateTokenResponse(session: S): TokenResponse {
     return TokenResponse.success(
       generateToken(session.id, TokenTarget.ACCESS),
       "bearer"
     )
   }
 
-  protected fun getVerifiedSession(sessionId: String): AuthorizationSession? {
+  protected fun getVerifiedSession(sessionId: String): S? {
     return getSession(sessionId)?.let {
       if(it.isExpired) {
         removeSession(sessionId)
@@ -104,12 +97,12 @@ abstract class OpenIDProvider(
     return generateTokenResponse(session)
   }
 
-  fun getPushedAuthorizationSuccessResponse(authorizationSession: AuthorizationSession) = PushedAuthorizationResponse.success(
+  fun getPushedAuthorizationSuccessResponse(authorizationSession: S) = PushedAuthorizationResponse.success(
     requestUri = "urn:ietf:params:oauth:request_uri:${authorizationSession.id}",
     expiresIn = authorizationSession.expirationTimestamp - Clock.System.now().epochSeconds
   )
 
-  fun getPushedAuthorizationSession(authorizationRequest: AuthorizationRequest): AuthorizationSession {
+  fun getPushedAuthorizationSession(authorizationRequest: AuthorizationRequest): S {
     val session = authorizationRequest.requestUri?.let {
       getVerifiedSession(
         it.substringAfter("urn:ietf:params:oauth:request_uri:")
