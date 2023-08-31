@@ -46,3 +46,5 @@ const val OP_TOS_URI = "op_tos_uri"
 
 const val OPENID_CREDENTIAL_AUTHORIZATION_TYPE = "openid_credential"
 const val RESPONSE_TYPE_CODE = "code"
+
+const val CROSS_DEVICE_CREDENTIAL_OFFER_URL = "openid-credential-offer://"

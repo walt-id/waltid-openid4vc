@@ -65,7 +65,7 @@ abstract class OpenIDProvider<S: AuthorizationSession>(
     return AuthorizationResponse.success(code)
   }
 
-  protected open fun generateTokenResponse(session: S): TokenResponse {
+  protected open fun generateTokenResponse(session: S, tokenRequest: TokenRequest): TokenResponse {
     return TokenResponse.success(
       generateToken(session.id, TokenTarget.ACCESS),
       "bearer"
@@ -94,7 +94,7 @@ abstract class OpenIDProvider<S: AuthorizationSession>(
     val sessionId = payload["sub"]!!.jsonPrimitive.content
     val session = getVerifiedSession(sessionId) ?: throw TokenError(tokenRequest, TokenErrorCode.invalid_request, "No authorization session found for given authorization code, or session expired.")
 
-    return generateTokenResponse(session)
+    return generateTokenResponse(session, tokenRequest)
   }
 
   fun getPushedAuthorizationSuccessResponse(authorizationSession: S) = PushedAuthorizationResponse.success(

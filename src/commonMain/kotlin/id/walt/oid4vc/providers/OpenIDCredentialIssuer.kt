@@ -1,13 +1,12 @@
 package id.walt.oid4vc.providers
 
 import id.walt.oid4vc.data.*
+import id.walt.oid4vc.definitions.CROSS_DEVICE_CREDENTIAL_OFFER_URL
 import id.walt.oid4vc.definitions.JWTClaims
 import id.walt.oid4vc.definitions.OPENID_CREDENTIAL_AUTHORIZATION_TYPE
 import id.walt.oid4vc.interfaces.CredentialResult
 import id.walt.oid4vc.interfaces.ICredentialProvider
-import id.walt.oid4vc.requests.AuthorizationRequest
-import id.walt.oid4vc.requests.BatchCredentialRequest
-import id.walt.oid4vc.requests.CredentialRequest
+import id.walt.oid4vc.requests.*
 import id.walt.oid4vc.responses.*
 import id.walt.oid4vc.util.randomUUID
 import io.ktor.http.*
@@ -115,8 +114,12 @@ abstract class OpenIDCredentialIssuer(
     }
   }
 
-  override fun generateTokenResponse(session: IssuanceSession): TokenResponse {
-    return super.generateTokenResponse(session).copy(
+  override fun generateTokenResponse(session: IssuanceSession, tokenRequest: TokenRequest): TokenResponse {
+    if(tokenRequest.grantType == GrantType.pre_authorized_code && !session.preAuthUserPin.isNullOrEmpty() &&
+      session.preAuthUserPin != tokenRequest.userPin) {
+      throw TokenError(tokenRequest, TokenErrorCode.invalid_grant, message = "User PIN required for this issuance session has not been provided or PIN is wrong.")
+    }
+    return super.generateTokenResponse(session, tokenRequest).copy(
       cNonce = generateProofOfPossessionNonceFor(session).cNonce,
       cNonceExpiresIn = session.expirationTimestamp - Clock.System.now().epochSeconds
       // TODO: authorization_pending, interval
@@ -229,6 +232,12 @@ abstract class OpenIDCredentialIssuer(
   fun getCIProviderMetadataUrl(): String {
     return URLBuilder(baseUrl).apply {
       pathSegments = listOf(".well-known", "openid-credential-issuer")
+    }.buildString()
+  }
+
+  open fun getCredentialOfferRequestUrl(offerRequest: CredentialOfferRequest, walletCredentialOfferEndpoint: String = CROSS_DEVICE_CREDENTIAL_OFFER_URL): String {
+    return URLBuilder(walletCredentialOfferEndpoint).apply {
+      parameters.appendAll(parametersOf(offerRequest.toHttpParameters()))
     }.buildString()
   }
 }

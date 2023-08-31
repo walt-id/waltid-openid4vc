@@ -11,6 +11,5 @@ abstract class AuthorizationSession {
   abstract val id: String
   abstract val authorizationRequest: AuthorizationRequest?
   abstract val expirationTimestamp: Long
-  abstract val preAuthUserPin: String?
   val isExpired get() = expirationTimestamp < Clock.System.now().epochSeconds
 }

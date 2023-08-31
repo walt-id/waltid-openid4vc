@@ -1,9 +1,12 @@
 package id.walt.oid4vc.providers
 
+import id.walt.oid4vc.data.CredentialOffer
 import id.walt.oid4vc.data.ProofOfPossession
 import id.walt.oid4vc.definitions.JWTClaims
 import id.walt.oid4vc.interfaces.ITokenProvider
+import id.walt.oid4vc.requests.CredentialOfferRequest
 import id.walt.sdjwt.JWTCryptoProvider
+import io.ktor.http.*
 import kotlinx.datetime.Clock
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -30,5 +33,17 @@ abstract class CredentialWallet(
         put(JWTClaims.Header.keyID, keyId)
       }, keyId = keyId)
     )
+  }
+
+  open fun getCIProviderMetadataUrl(baseUrl: String): String {
+    return URLBuilder(baseUrl).apply {
+      pathSegments = listOf(".well-known", "openid-credential-issuer")
+    }.buildString()
+  }
+
+  fun getCommonProviderMetadataUrl(baseUrl: String): String {
+    return URLBuilder(baseUrl).apply {
+      pathSegments = listOf(".well-known", "openid-configuration")
+    }.buildString()
   }
 }

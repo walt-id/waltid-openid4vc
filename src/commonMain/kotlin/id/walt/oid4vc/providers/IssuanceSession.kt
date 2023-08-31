@@ -7,7 +7,7 @@ data class IssuanceSession(
   override val id: String,
   override val authorizationRequest: AuthorizationRequest?,
   override val expirationTimestamp: Long,
-  override val preAuthUserPin: String? = null,
+  val preAuthUserPin: String? = null,
   val credentialOffer: CredentialOffer? = null,
   val cNonce: String? = null
 ): AuthorizationSession()
