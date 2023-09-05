@@ -30,7 +30,7 @@ abstract class OpenIDCredentialIssuer(
   batchCredentialEndpoint = "$baseUrl/batch_credential",
   deferredCredentialEndpoint = "$baseUrl/credential_deferred",
   jwksUri = "$baseUrl/jwks",
-  grantTypesSupported = setOf(GrantType.authorization_code.value, GrantType.pre_authorized_code.value),
+  grantTypesSupported = setOf(GrantType.authorization_code, GrantType.pre_authorized_code),
   requestUriParameterSupported = true,
   subjectTypesSupported = setOf(SubjectType.public),
   credentialIssuer = "$baseUrl/.well-known/openid-credential-issuer",

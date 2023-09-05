@@ -408,7 +408,8 @@ class CI_JVM_Test: AnnotationSpec() {
     // go through full authorization code flow to receive offered credential
     // auth request (short-cut, without pushed authorization request)
     val authReq = AuthorizationRequest(
-      RESPONSE_TYPE_CODE, credentialWallet.config.clientID, credentialWallet.config.redirectUri,
+      RESPONSE_TYPE_CODE, credentialWallet.config.clientID,
+      redirectUri =  credentialWallet.config.redirectUri,
       issuerState = parsedOfferReq.credentialOffer!!.grants[GrantType.authorization_code.value]!!.issuerState
     )
     val authResp = ktorClient.get(providerMetadata.authorizationEndpoint!!) {
