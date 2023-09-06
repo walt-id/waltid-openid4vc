@@ -1,7 +1,8 @@
 package id.walt.oid4vc.interfaces
 
-import id.walt.oid4vc.providers.CredentialError
-import id.walt.oid4vc.providers.DeferredCredentialError
+import id.walt.oid4vc.data.CredentialFormat
+import id.walt.oid4vc.errors.CredentialError
+import id.walt.oid4vc.errors.DeferredCredentialError
 import id.walt.oid4vc.requests.CredentialRequest
 import kotlinx.serialization.json.JsonElement
 
@@ -38,7 +39,7 @@ interface ICredentialProvider {
  * @param credentialId Unique ID of the requested credential, used to identify the request if issuance is deferred. (see [ICredentialProvider.getDeferredCredential])
  */
 data class CredentialResult(
-  val format: String,
+  val format: CredentialFormat,
   val credential: JsonElement?,
   val credentialId: String? = null
 )

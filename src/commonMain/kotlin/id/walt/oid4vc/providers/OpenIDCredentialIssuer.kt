@@ -4,6 +4,7 @@ import id.walt.oid4vc.data.*
 import id.walt.oid4vc.definitions.CROSS_DEVICE_CREDENTIAL_OFFER_URL
 import id.walt.oid4vc.definitions.JWTClaims
 import id.walt.oid4vc.definitions.OPENID_CREDENTIAL_AUTHORIZATION_TYPE
+import id.walt.oid4vc.errors.*
 import id.walt.oid4vc.interfaces.CredentialResult
 import id.walt.oid4vc.interfaces.ICredentialProvider
 import id.walt.oid4vc.requests.*
@@ -22,7 +23,7 @@ abstract class OpenIDCredentialIssuer(
 ): OpenIDProvider<IssuanceSession>(baseUrl), ICredentialProvider {
 
   protected open fun createDefaultProviderMetadata() = OpenIDProviderMetadata(
-  issuer = "$baseUrl",
+  issuer = baseUrl,
   authorizationEndpoint = "$baseUrl/authorize",
   pushedAuthorizationRequestEndpoint = "$baseUrl/par",
   tokenEndpoint = "$baseUrl/token",
@@ -38,13 +39,13 @@ abstract class OpenIDCredentialIssuer(
   )
 
   override val metadata get() = createDefaultProviderMetadata()
-  private var _supportedCredentialFormats: Set<String>? = null
+  private var _supportedCredentialFormats: Set<CredentialFormat>? = null
   val supportedCredentialFormats get() = _supportedCredentialFormats ?:
     (metadata.credentialsSupported?.map { it.format }?.toSet() ?: setOf()).also {
       _supportedCredentialFormats = it
     }
 
-  private fun isCredentialTypeSupported(format: String, types: List<String>?, docType: String?): Boolean {
+  private fun isCredentialTypeSupported(format: CredentialFormat, types: List<String>?, docType: String?): Boolean {
     if(types.isNullOrEmpty() && docType.isNullOrEmpty())
       return false
     return config.credentialsSupported.any { cred ->
@@ -142,9 +143,6 @@ abstract class OpenIDCredentialIssuer(
   }
 
   private fun doGenerateCredentialResponseFor(credentialRequest: CredentialRequest, session: IssuanceSession): CredentialResponse {
-    if(credentialRequest.format.isNullOrEmpty()) {
-      throw createCredentialError(credentialRequest, session, CredentialErrorCode.invalid_request, "Missing required parameters on credential request")
-    }
     val nonce = session.cNonce ?: throw createCredentialError(credentialRequest, session, CredentialErrorCode.invalid_request, "Session invalid")
     if(credentialRequest.proof == null || !validateProofOfPossesion(credentialRequest, nonce)) {
       throw createCredentialError(credentialRequest, session, CredentialErrorCode.invalid_or_missing_proof, "Invalid proof of possession")

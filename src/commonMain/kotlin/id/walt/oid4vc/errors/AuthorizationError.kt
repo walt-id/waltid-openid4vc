@@ -1,4 +1,4 @@
-package id.walt.oid4vc.providers
+package id.walt.oid4vc.errors
 
 import id.walt.oid4vc.requests.AuthorizationRequest
 import id.walt.oid4vc.responses.AuthorizationErrorCode

@@ -3,16 +3,15 @@ package id.walt.oid4vc.providers
 import id.walt.oid4vc.data.GrantType
 import id.walt.oid4vc.data.OpenIDProviderMetadata
 import id.walt.oid4vc.definitions.JWTClaims
+import id.walt.oid4vc.errors.AuthorizationError
+import id.walt.oid4vc.errors.TokenError
 import id.walt.oid4vc.interfaces.ISessionCache
 import id.walt.oid4vc.interfaces.ITokenProvider
 import id.walt.oid4vc.requests.AuthorizationRequest
 import id.walt.oid4vc.requests.TokenRequest
 import id.walt.oid4vc.responses.*
-import id.walt.oid4vc.util.randomUUID
 import io.ktor.http.*
 import kotlinx.datetime.Clock
-import kotlinx.datetime.DateTimeUnit
-import kotlinx.datetime.plus
 import kotlinx.serialization.json.*
 
 abstract class OpenIDProvider<S: AuthorizationSession>(

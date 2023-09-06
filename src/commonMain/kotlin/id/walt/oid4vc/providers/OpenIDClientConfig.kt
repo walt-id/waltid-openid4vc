@@ -1,6 +1,7 @@
 package id.walt.oid4vc.providers
 
-abstract class OpenIDClientConfig {
-  abstract val clientID: String
-  abstract val clientSecret: String?
-}
+data class OpenIDClientConfig(
+  val clientID: String,
+  val clientSecret: String?,
+  val redirectUri: String?
+)

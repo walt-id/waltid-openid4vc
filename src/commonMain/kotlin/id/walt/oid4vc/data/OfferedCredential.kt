@@ -9,7 +9,7 @@ import kotlinx.serialization.json.jsonObject
 
 @Serializable
 data class OfferedCredential(
-        val format: String,
+        val format: CredentialFormat,
         val types: List<String>? = null,
         @SerialName("doctype") val docType: String? = null,
         @SerialName("credential_definition") val credentialDefinition: JsonLDCredentialDefinition? = null,

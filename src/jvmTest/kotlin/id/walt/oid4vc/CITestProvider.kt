@@ -6,6 +6,7 @@ import id.walt.model.DidMethod
 import id.walt.model.DidUrl
 import id.walt.oid4vc.data.*
 import id.walt.oid4vc.definitions.JWTClaims
+import id.walt.oid4vc.errors.*
 import id.walt.oid4vc.interfaces.CredentialResult
 import id.walt.oid4vc.providers.*
 import id.walt.oid4vc.requests.AuthorizationRequest
@@ -39,13 +40,13 @@ class CITestProvider(): OpenIDCredentialIssuer(
   config = CredentialIssuerConfig(
       credentialsSupported = listOf(
         CredentialSupported(
-          "jwt_vc_json", "VerifiableId",
+          CredentialFormat.jwt_vc_json, "VerifiableId",
           cryptographicBindingMethodsSupported = setOf("did"), cryptographicSuitesSupported = setOf("ES256K"),
           types = listOf("VerifiableCredential", "VerifiableId"),
           customParameters = mapOf("foo" to JsonPrimitive("bar"))
         ),
         CredentialSupported(
-          "jwt_vc_json", "VerifiableDiploma",
+          CredentialFormat.jwt_vc_json, "VerifiableDiploma",
           cryptographicBindingMethodsSupported = setOf("did"), cryptographicSuitesSupported = setOf("ES256K"),
           types = listOf("VerifiableCredential", "VerifiableAttestation", "VerifiableDiploma")
         )
@@ -84,7 +85,7 @@ class CITestProvider(): OpenIDCredentialIssuer(
   }
 
   private fun doGenerateCredential(credentialRequest: CredentialRequest): CredentialResult {
-    if(credentialRequest.format == CredentialFormat.mso_mdoc.value) throw CredentialError(credentialRequest, CredentialErrorCode.unsupported_credential_format)
+    if(credentialRequest.format == CredentialFormat.mso_mdoc) throw CredentialError(credentialRequest, CredentialErrorCode.unsupported_credential_format)
     val types = credentialRequest.types ?: credentialRequest.credentialDefinition?.types ?: throw CredentialError(credentialRequest, CredentialErrorCode.unsupported_credential_type)
     val proofHeader = credentialRequest.proof?.jwt?.let { parseTokenHeader(it) } ?: throw CredentialError(credentialRequest, CredentialErrorCode.invalid_or_missing_proof, message = "Proof must be JWT proof")
     val holderKid = proofHeader[JWTClaims.Header.keyID]?.jsonPrimitive?.content ?: throw CredentialError(credentialRequest, CredentialErrorCode.invalid_or_missing_proof, message = "Proof JWT header must contain kid claim")
@@ -94,7 +95,7 @@ class CITestProvider(): OpenIDCredentialIssuer(
       issuer = W3CIssuer(baseUrl),
       storeCredential = false).let {
       when(credentialRequest.format) {
-        CredentialFormat.ldp_vc.value -> Json.decodeFromString<JsonObject>(it)
+        CredentialFormat.ldp_vc -> Json.decodeFromString<JsonObject>(it)
         else -> JsonPrimitive(it)
       }
     }.let { CredentialResult(credentialRequest.format, it) }

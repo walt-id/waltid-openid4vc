@@ -1,4 +1,4 @@
-package id.walt.oid4vc.providers
+package id.walt.oid4vc.errors
 
 import id.walt.oid4vc.requests.BatchCredentialRequest
 import id.walt.oid4vc.requests.CredentialRequest

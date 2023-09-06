@@ -12,7 +12,7 @@ import kotlinx.serialization.json.*
 
 @Serializable
 data class CredentialRequest(
-  val format: String,
+  val format: CredentialFormat,
   val proof: ProofOfPossession? = null,
   val types: List<String>? = null,
   @Serializable(ClaimDescriptorMapSerializer::class) val credentialSubject: Map<String, ClaimDescriptor>? = null,

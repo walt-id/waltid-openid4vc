@@ -2,12 +2,10 @@ package id.walt.oid4vc.requests
 
 import id.walt.oid4vc.data.*
 import id.walt.oid4vc.data.dif.PresentationDefinition
-import id.walt.oid4vc.definitions.RESPONSE_TYPE_CODE
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.json.Json
 
 data class AuthorizationRequest(
-  val responseType: String = RESPONSE_TYPE_CODE,
+  val responseType: String = ResponseType.getResponseTypeString(ResponseType.code),
   val clientId: String,
   val responseMode: ResponseMode? = null,
   val redirectUri: String? = null,

@@ -28,7 +28,7 @@ import kotlinx.serialization.json.jsonObject
 @Serializable
 data class AuthorizationDetails(
   @EncodeDefault val type: String = OPENID_CREDENTIAL_AUTHORIZATION_TYPE,
-  val format: String? = null,
+  val format: CredentialFormat? = null,
   val types: List<String>? = null,
   @Serializable(ClaimDescriptorMapSerializer::class) val credentialSubject: Map<String, ClaimDescriptor>? = null,
   @SerialName("doctype") val docType: String? = null,

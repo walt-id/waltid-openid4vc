@@ -42,5 +42,9 @@ enum class AuthorizationErrorCode {
   unsupported_response_type,
   invalid_scope,
   server_error,
-  temporarily_unavailable
+  temporarily_unavailable,
+  invalid_client,
+  vp_formats_not_supported,
+  invalid_presentation_definition_uri,
+  invalid_presentation_definition_reference
 }
