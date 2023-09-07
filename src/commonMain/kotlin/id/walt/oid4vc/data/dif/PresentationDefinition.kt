@@ -13,7 +13,7 @@ import kotlinx.serialization.json.jsonObject
 @Serializable
 data class PresentationDefinition(
     val id: String = "1",
-    @SerialName("input_descriptors") @Serializable(InputDescriptorFieldListSerializer::class) val inputDescriptors: List<InputDescriptor>,
+    @SerialName("input_descriptors") @Serializable(InputDescriptorListSerializer::class) val inputDescriptors: List<InputDescriptor>,
     val name: String? = null,
     val purpose: String? = null,
     @Serializable(VCFormatMapSerializer::class) val format: Map<VCFormat, VCFormatDefinition>? = null,

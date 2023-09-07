@@ -91,10 +91,11 @@ abstract class SIOPCredentialProvider(
   }
 
   override fun initializeAuthorization(authorizationRequest: AuthorizationRequest, expiresIn: Int): SIOPSession {
-    return if(validateAuthorizationRequest(authorizationRequest)) {
-      SIOPSession(randomUUID(), authorizationRequest, Clock.System.now().plus(expiresIn, DateTimeUnit.SECOND).epochSeconds)
+    val resolvedAuthReq = resolveVPAuthorizationParameters(authorizationRequest)
+    return if(validateAuthorizationRequest(resolvedAuthReq)) {
+      SIOPSession(randomUUID(), resolvedAuthReq, Clock.System.now().plus(expiresIn, DateTimeUnit.SECOND).epochSeconds)
     } else {
-      throw AuthorizationError(authorizationRequest, AuthorizationErrorCode.invalid_request, message = "Invalid VP authorization request")
+      throw AuthorizationError(resolvedAuthReq, AuthorizationErrorCode.invalid_request, message = "Invalid VP authorization request")
     }.also {
       putSession(it.id, it)
     }

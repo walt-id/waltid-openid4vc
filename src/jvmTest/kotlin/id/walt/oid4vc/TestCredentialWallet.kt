@@ -42,14 +42,6 @@ class TestCredentialWallet(
   override val metadata: OpenIDProviderMetadata
     get() = TODO("Not yet implemented")
 
-  override fun validateAuthorizationRequest(authorizationRequest: AuthorizationRequest): Boolean {
-    TODO("Not yet implemented")
-  }
-
-  override fun initializeAuthorization(authorizationRequest: AuthorizationRequest, expiresIn: Int): SIOPSession {
-    TODO("Not yet implemented")
-  }
-
   override fun getSession(id: String): SIOPSession? {
     TODO("Not yet implemented")
   }
