@@ -1,5 +1,5 @@
 package id.walt.oid4vc.providers
 
-data class CredentialWalletConfig(
+data class SIOPProviderConfig(
   val redirectUri: String? = null
 ): OpenIDProviderConfig()

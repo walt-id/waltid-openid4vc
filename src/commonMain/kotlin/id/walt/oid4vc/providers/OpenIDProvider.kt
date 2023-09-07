@@ -2,6 +2,7 @@ package id.walt.oid4vc.providers
 
 import id.walt.oid4vc.data.GrantType
 import id.walt.oid4vc.data.OpenIDProviderMetadata
+import id.walt.oid4vc.data.ResponseType
 import id.walt.oid4vc.definitions.JWTClaims
 import id.walt.oid4vc.errors.AuthorizationError
 import id.walt.oid4vc.errors.TokenError
@@ -59,9 +60,19 @@ abstract class OpenIDProvider<S: AuthorizationSession>(
   protected abstract fun validateAuthorizationRequest(authorizationRequest: AuthorizationRequest): Boolean
 
   abstract fun initializeAuthorization(authorizationRequest: AuthorizationRequest, expiresIn: Int): S
-  open fun continueAuthorization(authorizationSession: S): AuthorizationResponse {
+  open fun continueCodeFlowAuthorization(authorizationRequest: AuthorizationRequest): AuthorizationCodeResponse {
+    if(authorizationRequest.responseType != ResponseType.code.name)
+      throw AuthorizationError(authorizationRequest, AuthorizationErrorCode.invalid_request, message = "Invalid response type ${authorizationRequest.responseType}, for authorization code flow.")
+    val authorizationSession = getOrInitAuthorizationSession(authorizationRequest)
     val code = generateAuthorizationCodeFor(authorizationSession)
-    return AuthorizationResponse.success(code)
+    return AuthorizationCodeResponse.success(code)
+  }
+
+  open fun continueImplicitFlowAuthorization(authorizationRequest: AuthorizationRequest): TokenResponse {
+    if(!authorizationRequest.responseType.contains(ResponseType.token.name))
+      throw AuthorizationError(authorizationRequest, AuthorizationErrorCode.invalid_request, message = "Invalid response type ${authorizationRequest.responseType}, for implicit authorization flow.")
+    val authorizationSession = getOrInitAuthorizationSession(authorizationRequest)
+    return generateTokenResponse(authorizationSession, TokenRequest(GrantType.implicit, authorizationRequest.clientId))
   }
 
   protected open fun generateTokenResponse(session: S, tokenRequest: TokenRequest): TokenResponse {
@@ -100,6 +111,13 @@ abstract class OpenIDProvider<S: AuthorizationSession>(
     requestUri = "urn:ietf:params:oauth:request_uri:${authorizationSession.id}",
     expiresIn = authorizationSession.expirationTimestamp - Clock.System.now().epochSeconds
   )
+
+  protected open fun getOrInitAuthorizationSession(authorizationRequest: AuthorizationRequest): S {
+    return when(authorizationRequest.isReferenceToPAR) {
+      true -> getPushedAuthorizationSession(authorizationRequest)
+      false -> initializeAuthorization(authorizationRequest, 600)
+    }
+  }
 
   fun getPushedAuthorizationSession(authorizationRequest: AuthorizationRequest): S {
     val session = authorizationRequest.requestUri?.let {

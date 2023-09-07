@@ -1,5 +1,6 @@
 package id.walt.oid4vc.responses
 
+import id.walt.oid4vc.data.IHTTPDataObject
 import id.walt.oid4vc.data.JsonDataObject
 import id.walt.oid4vc.data.JsonDataObjectFactory
 import id.walt.oid4vc.data.JsonDataObjectSerializer
@@ -25,7 +26,7 @@ data class TokenResponse private constructor(
   @SerialName("error_description") val errorDescription: String? = null,
   @SerialName("error_uri") val errorUri: String? = null,
   override val customParameters: Map<String, JsonElement> = mapOf()
-): JsonDataObject() {
+): JsonDataObject(), IHTTPDataObject {
   val isSuccess get() = accessToken != null
   override fun toJSON() = Json.encodeToJsonElement(TokenResponseSerializer, this).jsonObject
 
@@ -38,6 +39,43 @@ data class TokenResponse private constructor(
 
     fun error(error: TokenErrorCode, errorDescription: String? = null, errorUri: String? = null)
     = TokenResponse(error = error.name, errorDescription = errorDescription, errorUri = errorUri)
+
+    private val knownKeys = setOf("access_token", "token_type", "expires_in", "refresh_token", "scope", "c_nonce", "c_nonce_expires_in", "authorization_pending", "interval", "error", "error_description", "error_uri")
+    fun fromHttpParameters(parameters: Map<String, List<String>>): TokenResponse {
+      return TokenResponse(
+        parameters["access_token"]?.firstOrNull(),
+        parameters["token_type"]?.firstOrNull(),
+        parameters["expires_in"]?.firstOrNull()?.toLong(),
+        parameters["refresh_token"]?.firstOrNull(),
+        parameters["scope"]?.firstOrNull(),
+        parameters["c_nonce"]?.firstOrNull(),
+        parameters["c_nonce_expires_in"]?.firstOrNull()?.toLong(),
+        parameters["authorization_pending"]?.firstOrNull()?.toBoolean(),
+        parameters["interval"]?.firstOrNull()?.toLong(),
+        parameters["error"]?.firstOrNull(),
+        parameters["error_description"]?.firstOrNull(),
+        parameters["error_uri"]?.firstOrNull(),
+        parameters.filter { !knownKeys.contains(it.key) && !it.value.isEmpty() }.mapValues { Json.parseToJsonElement(it.value.first()) }
+      )
+    }
+  }
+
+  override fun toHttpParameters(): Map<String, List<String>> {
+    return buildMap {
+      accessToken?.let { put("access_token", listOf(it)) }
+      tokenType?.let { put("token_type", listOf(it)) }
+      expiresIn?.let { put("expires_in", listOf(it.toString())) }
+      refreshToken?.let { put("refresh_token", listOf(it)) }
+      scope?.let { put("scope", listOf(it)) }
+      cNonce?.let { put("c_nonce", listOf(it)) }
+      cNonceExpiresIn?.let { put("c_nonce_expires_in", listOf(it.toString())) }
+      authorizationPending?.let { put("authorization_pending", listOf(it.toString())) }
+      interval?.let { put("interval", listOf(it.toString())) }
+      error?.let { put("error", listOf(it)) }
+      errorDescription?.let { put("error_description", listOf(it)) }
+      errorUri?.let { put("error_uri", listOf(it)) }
+      putAll(customParameters.mapValues { listOf(it.value.toString()) })
+    }
   }
 }
 

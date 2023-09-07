@@ -13,6 +13,7 @@ import id.walt.oid4vc.requests.AuthorizationRequest
 import id.walt.oid4vc.requests.BatchCredentialRequest
 import id.walt.oid4vc.requests.CredentialRequest
 import id.walt.oid4vc.requests.TokenRequest
+import id.walt.oid4vc.responses.AuthorizationErrorCode
 import id.walt.oid4vc.responses.CredentialErrorCode
 import id.walt.oid4vc.util.randomUUID
 import id.walt.services.did.DidService
@@ -129,16 +130,22 @@ class CITestProvider(): OpenIDCredentialIssuer(
         get("/authorize") {
           val authReq = AuthorizationRequest.fromHttpParameters(call.parameters.toMap())
           try {
-            val authSession = when(authReq.isReferenceToPAR) {
-              true -> getPushedAuthorizationSession(authReq)
-              false -> initializeAuthorization(authReq, 600)
+            val authResp = if(authReq.responseType == ResponseType.code.name) {
+              continueCodeFlowAuthorization(authReq)
+            } else if(authReq.responseType.contains(ResponseType.token.name)) {
+              continueImplicitFlowAuthorization(authReq)
+            } else {
+              throw AuthorizationError(authReq, AuthorizationErrorCode.unsupported_response_type, "Response type not supported")
             }
-            val authResp = continueAuthorization(authSession)
+            val redirectUri = if(authReq.isReferenceToPAR) {
+              getPushedAuthorizationSession(authReq).authorizationRequest?.redirectUri
+            } else {
+              authReq.redirectUri
+            } ?: throw AuthorizationError(authReq, AuthorizationErrorCode.invalid_request, "No redirect_uri found for this authorization request")
             call.response.apply {
               status(HttpStatusCode.Found)
-              header(HttpHeaders.Location, URLBuilder(authSession.authorizationRequest!!.redirectUri!!).apply {
-                parameters.appendAll(parametersOf(authResp.toHttpParameters()))
-              }.buildString())
+              val defaultResponseMode = if(authReq.responseType == ResponseType.code.name) ResponseMode.query else ResponseMode.fragment
+              header(HttpHeaders.Location, authResp.toRedirectUri(redirectUri, authReq.responseMode ?: defaultResponseMode))
             }
           } catch (authExc: AuthorizationError) {
             call.response.apply {

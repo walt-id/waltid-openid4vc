@@ -3,7 +3,7 @@ package id.walt.oid4vc.responses
 import id.walt.oid4vc.data.HTTPDataObject
 import id.walt.oid4vc.data.HTTPDataObjectFactory
 
-data class AuthorizationResponse private constructor (
+data class AuthorizationCodeResponse private constructor (
   val code: String?,
   val error: String?,
   val errorDescription: String?,
@@ -19,10 +19,10 @@ data class AuthorizationResponse private constructor (
     }
   }
 
-  companion object: HTTPDataObjectFactory<AuthorizationResponse>() {
+  companion object: HTTPDataObjectFactory<AuthorizationCodeResponse>() {
     private val knownKeys = setOf("code", "error", "error_description")
-    override fun fromHttpParameters(parameters: Map<String, List<String>>): AuthorizationResponse {
-      return AuthorizationResponse(
+    override fun fromHttpParameters(parameters: Map<String, List<String>>): AuthorizationCodeResponse {
+      return AuthorizationCodeResponse(
         parameters["code"]?.firstOrNull(),
         parameters["error"]?.firstOrNull(),
         parameters["error_description"]?.firstOrNull(),
@@ -30,8 +30,8 @@ data class AuthorizationResponse private constructor (
       )
     }
 
-    fun success(code: String, customParameters: Map<String, List<String>> = mapOf()) = AuthorizationResponse(code, null, null, customParameters)
-    fun error(error: AuthorizationErrorCode, errorDescription: String? = null, customParameters: Map<String, List<String>> = mapOf()) = AuthorizationResponse(null, error.name, errorDescription, customParameters)
+    fun success(code: String, customParameters: Map<String, List<String>> = mapOf()) = AuthorizationCodeResponse(code, null, null, customParameters)
+    fun error(error: AuthorizationErrorCode, errorDescription: String? = null, customParameters: Map<String, List<String>> = mapOf()) = AuthorizationCodeResponse(null, error.name, errorDescription, customParameters)
   }
 }
 

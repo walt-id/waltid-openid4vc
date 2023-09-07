@@ -3,13 +3,11 @@ package id.walt.oid4vc
 import id.walt.model.DidMethod
 import id.walt.oid4vc.data.OpenIDProviderMetadata
 import id.walt.oid4vc.data.dif.PresentationDefinition
-import id.walt.oid4vc.providers.CredentialWallet
-import id.walt.oid4vc.providers.CredentialWalletConfig
+import id.walt.oid4vc.providers.SIOPCredentialProvider
+import id.walt.oid4vc.providers.SIOPProviderConfig
 import id.walt.oid4vc.providers.SIOPSession
 import id.walt.oid4vc.providers.TokenTarget
 import id.walt.oid4vc.requests.AuthorizationRequest
-import id.walt.sdjwt.JWTCryptoProvider
-import id.walt.services.did.DidOptions
 import id.walt.services.did.DidService
 import id.walt.services.jwt.JwtService
 import kotlinx.serialization.json.JsonObject
@@ -18,8 +16,8 @@ const val WALLET_PORT = 8001
 const val WALLET_BASE_URL = "http://localhost:${WALLET_PORT}"
 
 class TestCredentialWallet(
-  config: CredentialWalletConfig
-): CredentialWallet(WALLET_BASE_URL, config) {
+  config: SIOPProviderConfig
+): SIOPCredentialProvider(WALLET_BASE_URL, config) {
   override fun signToken(target: TokenTarget, payload: JsonObject, header: JsonObject?, keyId: String?)
     = JwtService.getService().sign(payload, keyId)
 
@@ -35,6 +33,10 @@ class TestCredentialWallet(
   override fun resolveDID(did: String): String {
     val didObj = DidService.resolve(did)
     return (didObj.authentication ?: didObj.assertionMethod ?: didObj.verificationMethod)?.firstOrNull()?.id ?: did
+  }
+
+  override fun resolveJSON(url: String): JsonObject? {
+    TODO("Not yet implemented")
   }
 
   override val metadata: OpenIDProviderMetadata
