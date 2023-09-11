@@ -60,7 +60,7 @@ abstract class OpenIDProvider<S: AuthorizationSession>(
   protected abstract fun validateAuthorizationRequest(authorizationRequest: AuthorizationRequest): Boolean
 
   abstract fun initializeAuthorization(authorizationRequest: AuthorizationRequest, expiresIn: Int): S
-  open fun continueCodeFlowAuthorization(authorizationRequest: AuthorizationRequest): AuthorizationCodeResponse {
+  open fun processCodeFlowAuthorization(authorizationRequest: AuthorizationRequest): AuthorizationCodeResponse {
     if(authorizationRequest.responseType != ResponseType.code.name)
       throw AuthorizationError(authorizationRequest, AuthorizationErrorCode.invalid_request, message = "Invalid response type ${authorizationRequest.responseType}, for authorization code flow.")
     val authorizationSession = getOrInitAuthorizationSession(authorizationRequest)
@@ -68,7 +68,7 @@ abstract class OpenIDProvider<S: AuthorizationSession>(
     return AuthorizationCodeResponse.success(code)
   }
 
-  open fun continueImplicitFlowAuthorization(authorizationRequest: AuthorizationRequest): TokenResponse {
+  open fun processImplicitFlowAuthorization(authorizationRequest: AuthorizationRequest): TokenResponse {
     if(!authorizationRequest.responseType.contains(ResponseType.token.name))
       throw AuthorizationError(authorizationRequest, AuthorizationErrorCode.invalid_request, message = "Invalid response type ${authorizationRequest.responseType}, for implicit authorization flow.")
     val authorizationSession = getOrInitAuthorizationSession(authorizationRequest)

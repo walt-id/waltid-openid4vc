@@ -131,9 +131,9 @@ class CITestProvider(): OpenIDCredentialIssuer(
           val authReq = AuthorizationRequest.fromHttpParameters(call.parameters.toMap())
           try {
             val authResp = if(authReq.responseType == ResponseType.code.name) {
-              continueCodeFlowAuthorization(authReq)
+              processCodeFlowAuthorization(authReq)
             } else if(authReq.responseType.contains(ResponseType.token.name)) {
-              continueImplicitFlowAuthorization(authReq)
+              processImplicitFlowAuthorization(authReq)
             } else {
               throw AuthorizationError(authReq, AuthorizationErrorCode.unsupported_response_type, "Response type not supported")
             }
