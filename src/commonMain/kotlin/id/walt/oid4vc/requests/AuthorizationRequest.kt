@@ -22,6 +22,7 @@ data class AuthorizationRequest(
   val clientMetadata: OpenIDClientMetadata? = null,
   val clientMetadataUri: String? = null,
   val nonce: String? = null,
+  val responseUri: String? = null,
   override val customParameters: Map<String, List<String>> = mapOf()
 ): HTTPDataObject() {
   val isReferenceToPAR get() = requestUri != null
@@ -45,12 +46,13 @@ data class AuthorizationRequest(
       clientMetadata?.let { put("client_metadata", listOf(it.toJSONString())) }
       clientMetadataUri?.let { put("client_metadata_uri", listOf(it)) }
       nonce?.let { put("nonce", listOf(it)) }
+      responseUri?.let { put("response_uri", listOf(it)) }
       putAll(customParameters)
     }
   }
 
   companion object: HTTPDataObjectFactory<AuthorizationRequest>() {
-    private val knownKeys = setOf("response_type", "client_id", "redirect_uri", "scope", "state", "authorization_details", "wallet_issuer", "user_hint", "issuer_state", "presentation_definition", "presentation_definition_uri", "client_id_scheme", "client_metadata", "client_metadata_uri", "nonce", "response_mode")
+    private val knownKeys = setOf("response_type", "client_id", "redirect_uri", "scope", "state", "authorization_details", "wallet_issuer", "user_hint", "issuer_state", "presentation_definition", "presentation_definition_uri", "client_id_scheme", "client_metadata", "client_metadata_uri", "nonce", "response_mode", "response_uri")
     override fun fromHttpParameters(parameters: Map<String, List<String>>): AuthorizationRequest {
       return AuthorizationRequest(
         parameters["response_type"]!!.first(),
@@ -70,6 +72,7 @@ data class AuthorizationRequest(
         parameters["client_metadata"]?.firstOrNull()?.let { OpenIDClientMetadata.fromJSONString(it) },
         parameters["client_metadata_uri"]?.firstOrNull(),
         parameters["nonce"]?.firstOrNull(),
+        parameters["response_uri"]?.firstOrNull(),
         parameters.filterKeys { !knownKeys.contains(it) }
       )
     }
