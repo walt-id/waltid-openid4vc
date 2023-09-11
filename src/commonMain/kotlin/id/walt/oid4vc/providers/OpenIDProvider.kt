@@ -3,6 +3,7 @@ package id.walt.oid4vc.providers
 import id.walt.oid4vc.data.GrantType
 import id.walt.oid4vc.data.OpenIDProviderMetadata
 import id.walt.oid4vc.data.ResponseType
+import id.walt.oid4vc.data.SubjectType
 import id.walt.oid4vc.definitions.JWTClaims
 import id.walt.oid4vc.errors.AuthorizationError
 import id.walt.oid4vc.errors.TokenError
@@ -20,6 +21,21 @@ abstract class OpenIDProvider<S: AuthorizationSession>(
 ): ISessionCache<S>, ITokenProvider {
   abstract val metadata: OpenIDProviderMetadata
   abstract val config: OpenIDProviderConfig
+
+  protected open fun createDefaultProviderMetadata() = OpenIDProviderMetadata(
+    issuer = baseUrl,
+    authorizationEndpoint = "$baseUrl/authorize",
+    pushedAuthorizationRequestEndpoint = "$baseUrl/par",
+    tokenEndpoint = "$baseUrl/token",
+    credentialEndpoint = "$baseUrl/credential",
+    batchCredentialEndpoint = "$baseUrl/batch_credential",
+    deferredCredentialEndpoint = "$baseUrl/credential_deferred",
+    jwksUri = "$baseUrl/jwks",
+    grantTypesSupported = setOf(GrantType.authorization_code, GrantType.pre_authorized_code),
+    requestUriParameterSupported = true,
+    subjectTypesSupported = setOf(SubjectType.public),
+    credentialIssuer = "$baseUrl/.well-known/openid-credential-issuer"
+  )
 
   fun getCommonProviderMetadataUrl(): String {
     return URLBuilder(baseUrl).apply {

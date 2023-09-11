@@ -1,15 +1,47 @@
 package id.walt.oid4vc
 
-import id.walt.oid4vc.data.dif.DisclosureLimitation
-import id.walt.oid4vc.data.dif.PresentationDefinition
-import id.walt.oid4vc.data.dif.SubmissionRequirementRule
-import id.walt.oid4vc.data.dif.VCFormat
+import id.walt.auditor.Auditor
+import id.walt.auditor.policies.SignaturePolicy
+import id.walt.oid4vc.data.OpenIDClientMetadata
+import id.walt.oid4vc.data.ResponseMode
+import id.walt.oid4vc.data.ResponseType
+import id.walt.oid4vc.data.dif.*
+import id.walt.oid4vc.providers.SIOPProviderConfig
+import id.walt.oid4vc.requests.AuthorizationRequest
+import id.walt.oid4vc.responses.TokenResponse
+import id.walt.servicematrix.ServiceMatrix
 import io.kotest.core.spec.style.AnnotationSpec
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.ktor.client.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.request.*
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
+import io.ktor.util.*
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 class VP_JVM_Test: AnnotationSpec() {
+
+  private lateinit var testWallet: TestCredentialWallet
+
+  val ktorClient = HttpClient(CIO) {
+    install(ContentNegotiation) {
+      json()
+    }
+    followRedirects = false
+  }
+
+  @BeforeAll
+  fun init() {
+    ServiceMatrix("service-matrix.properties")
+    testWallet = TestCredentialWallet(SIOPProviderConfig(WALLET_BASE_URL))
+    testWallet.start()
+  }
 
   @Test
   fun testParsePresentationDefinition() {
@@ -35,6 +67,37 @@ class VP_JVM_Test: AnnotationSpec() {
     pd3.submissionRequirements!!.first().rule shouldBe SubmissionRequirementRule.pick
     pd3.submissionRequirements!!.first().count shouldBe 1
     pd3.submissionRequirements!!.first().from shouldBe "A"
+  }
+
+  @Test
+  suspend fun testVPAuthorization() {
+    val authReq = AuthorizationRequest(
+      responseType = ResponseType.vp_token.name,
+      clientId = "test-verifier",
+      responseMode = ResponseMode.query,
+      redirectUri = "http://blank",
+      presentationDefinition = PresentationDefinition(inputDescriptors = listOf(
+        InputDescriptor(
+          format = mapOf(VCFormat.jwt_vc_json to VCFormatDefinition(setOf("EdDSA"))),
+          constraints = InputDescriptorConstraints(fields = listOf(
+            InputDescriptorField(listOf("$.type"), filter = buildJsonObject {
+              put("type", "string")
+              put("const", "VerifiableId")
+            })
+          ))
+        )
+      )),
+      clientMetadata = OpenIDClientMetadata(listOf(testWallet.baseUrl))
+    )
+    val authResp = ktorClient.get(testWallet.metadata.authorizationEndpoint!!) {
+      url { parameters.appendAll(parametersOf(authReq.toHttpParameters())) }
+    }
+    authResp.status shouldBe HttpStatusCode.Found
+    authResp.headers.names() shouldContain HttpHeaders.Location
+    val redirectUrl = Url(authResp.headers[HttpHeaders.Location]!!)
+    val tokenResponse = TokenResponse.fromHttpParameters(redirectUrl.parameters.toMap())
+    tokenResponse.vpToken shouldNotBe null
+    Auditor.getService().verify(tokenResponse.vpToken!!.toString(), listOf(SignaturePolicy())).result shouldBe true
   }
 
   val presentationDefinitionExample1 = "{\n" +

@@ -81,8 +81,12 @@ class TestCredentialWallet(
     return runBlocking { ktorClient.get(url).body() }
   }
 
+  override fun isPresentationDefinitionSupported(presentationDefinition: PresentationDefinition): Boolean {
+    return true
+  }
+
   override val metadata: OpenIDProviderMetadata
-    get() = TODO("Not yet implemented")
+    get() = createDefaultProviderMetadata()
 
   override fun getSession(id: String) = sessionCache[id]
   override fun putSession(id: String, session: SIOPSession) = sessionCache.put(id, session)
@@ -128,6 +132,6 @@ class TestCredentialWallet(
           }
         }
       }
-    }
+    }.start()
   }
 }

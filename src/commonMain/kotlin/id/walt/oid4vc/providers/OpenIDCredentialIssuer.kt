@@ -22,23 +22,9 @@ abstract class OpenIDCredentialIssuer(
   override val config: CredentialIssuerConfig
 ): OpenIDProvider<IssuanceSession>(baseUrl), ICredentialProvider {
 
-  protected open fun createDefaultProviderMetadata() = OpenIDProviderMetadata(
-  issuer = baseUrl,
-  authorizationEndpoint = "$baseUrl/authorize",
-  pushedAuthorizationRequestEndpoint = "$baseUrl/par",
-  tokenEndpoint = "$baseUrl/token",
-  credentialEndpoint = "$baseUrl/credential",
-  batchCredentialEndpoint = "$baseUrl/batch_credential",
-  deferredCredentialEndpoint = "$baseUrl/credential_deferred",
-  jwksUri = "$baseUrl/jwks",
-  grantTypesSupported = setOf(GrantType.authorization_code, GrantType.pre_authorized_code),
-  requestUriParameterSupported = true,
-  subjectTypesSupported = setOf(SubjectType.public),
-  credentialIssuer = "$baseUrl/.well-known/openid-credential-issuer",
-  credentialsSupported = config.credentialsSupported
+  override val metadata get() = createDefaultProviderMetadata().copy(
+    credentialsSupported = config.credentialsSupported
   )
-
-  override val metadata get() = createDefaultProviderMetadata()
   private var _supportedCredentialFormats: Set<CredentialFormat>? = null
   val supportedCredentialFormats get() = _supportedCredentialFormats ?:
     (metadata.credentialsSupported?.map { it.format }?.toSet() ?: setOf()).also {

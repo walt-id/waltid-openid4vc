@@ -66,9 +66,7 @@ abstract class SIOPCredentialProvider(
 
   abstract fun resolveJSON(url: String): JsonObject?
 
-  protected open fun isPresentationDefinitionSupported(presentationDefinition: PresentationDefinition): Boolean {
-    TODO()
-  }
+  protected abstract fun isPresentationDefinitionSupported(presentationDefinition: PresentationDefinition): Boolean
 
   override fun validateAuthorizationRequest(authorizationRequest: AuthorizationRequest): Boolean {
     return authorizationRequest.responseType == ResponseType.vp_token.name &&
