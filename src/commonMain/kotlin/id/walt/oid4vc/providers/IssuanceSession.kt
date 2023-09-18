@@ -9,5 +9,6 @@ data class IssuanceSession(
   override val expirationTimestamp: Long,
   val preAuthUserPin: String? = null,
   val credentialOffer: CredentialOffer? = null,
-  val cNonce: String? = null
+  val cNonce: String? = null,
+  val customParameters: Map<String, Any>? = null
 ): AuthorizationSession()
