@@ -17,6 +17,10 @@ import kotlinx.datetime.plus
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
+/**
+ * Base object for a service, providing issuance of verifiable credentials via the OpenID4CI issuance protocol
+ * e.g.: Credential issuer
+ */
 abstract class OpenIDCredentialIssuer(
   baseUrl: String,
   override val config: CredentialIssuerConfig

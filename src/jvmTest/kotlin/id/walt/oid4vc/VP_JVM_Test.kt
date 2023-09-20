@@ -2,6 +2,11 @@ package id.walt.oid4vc
 
 import id.walt.auditor.Auditor
 import id.walt.auditor.policies.SignaturePolicy
+import id.walt.credentials.w3c.PresentableCredential
+import id.walt.credentials.w3c.VerifiableCredential
+import id.walt.credentials.w3c.toVerifiableCredential
+import id.walt.credentials.w3c.toVerifiablePresentation
+import id.walt.custodian.Custodian
 import id.walt.oid4vc.data.OpenIDClientMetadata
 import id.walt.oid4vc.data.ResponseMode
 import id.walt.oid4vc.data.ResponseType
@@ -10,24 +15,30 @@ import id.walt.oid4vc.providers.SIOPProviderConfig
 import id.walt.oid4vc.requests.AuthorizationRequest
 import id.walt.oid4vc.responses.TokenResponse
 import id.walt.servicematrix.ServiceMatrix
+import id.walt.signatory.ProofConfig
+import id.walt.signatory.Signatory
 import io.kotest.core.spec.style.AnnotationSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNot
 import io.kotest.matchers.shouldNotBe
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.util.*
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
 class VP_JVM_Test: AnnotationSpec() {
 
   private lateinit var testWallet: TestCredentialWallet
+  private lateinit var testVerifier: VPTestVerifier
 
   val ktorClient = HttpClient(CIO) {
     install(ContentNegotiation) {
@@ -41,6 +52,9 @@ class VP_JVM_Test: AnnotationSpec() {
     ServiceMatrix("service-matrix.properties")
     testWallet = TestCredentialWallet(SIOPProviderConfig(WALLET_BASE_URL))
     testWallet.start()
+
+    testVerifier = VPTestVerifier()
+    testVerifier.start()
   }
 
   @Test
@@ -98,6 +112,64 @@ class VP_JVM_Test: AnnotationSpec() {
     val tokenResponse = TokenResponse.fromHttpParameters(redirectUrl.parameters.toMap())
     tokenResponse.vpToken shouldNotBe null
     Auditor.getService().verify(tokenResponse.vpToken!!.toString(), listOf(SignaturePolicy())).result shouldBe true
+  }
+
+  @Test
+  suspend fun testMattrLaunchpadVerificationRequest() {
+    // parse verification request (QR code)
+    val authReq = AuthorizationRequest.fromHttpQueryString(Url(mattrLaunchpadVerificationRequest).encodedQuery)
+    authReq.responseMode shouldBe ResponseMode.direct_post
+    authReq.responseType shouldBe ResponseType.vp_token.name
+    authReq.responseUri shouldNotBe null
+    authReq.presentationDefinition shouldBe null
+    authReq.presentationDefinitionUri shouldNotBe null
+
+    val presentationDefinition = PresentationDefinition.fromJSONString(mattrLaunchpadPresentationDefinitionData)
+    presentationDefinition.id shouldBe "vp token example"
+    presentationDefinition.inputDescriptors.size shouldBe 1
+    presentationDefinition.inputDescriptors[0].id shouldBe "OpenBadgeCredential"
+    presentationDefinition.inputDescriptors[0].format!!.keys shouldContain VCFormat.jwt_vc_json
+    presentationDefinition.inputDescriptors[0].format!![VCFormat.jwt_vc_json]!!.alg!! shouldContain "EdDSA"
+    presentationDefinition.inputDescriptors[0].constraints?.fields?.first()?.path?.first() shouldBe "$.type"
+    presentationDefinition.inputDescriptors[0].constraints?.fields?.first()?.filter?.get("pattern")?.jsonPrimitive?.content shouldBe "OpenBadgeCredential"
+
+    val siopSession = testWallet.initializeAuthorization(authReq, 600)
+    siopSession.authorizationRequest?.presentationDefinition shouldNotBe null
+    val tokenResponse = testWallet.processImplicitFlowAuthorization(siopSession.authorizationRequest!!)
+    tokenResponse.vpToken shouldNotBe null
+    tokenResponse.presentationSubmission shouldNotBe null
+    /*val resp = ktorClient.submitForm(siopSession.authorizationRequest!!.responseUri!!,
+      parameters {
+        tokenResponse.toHttpParameters().forEach { entry ->
+          entry.value.forEach { append(entry.key, it) }
+        }
+      })
+    resp.status shouldBe HttpStatusCode.OK*/
+  }
+
+  @Test
+  suspend fun testInitializeVerifierSession() {
+    val verifierSession = testVerifier.initializeAuthorization(PresentationDefinition(inputDescriptors = listOf(
+      InputDescriptor(
+        format = mapOf(VCFormat.jwt_vc_json to VCFormatDefinition(alg = setOf("EdDSA"))),
+        constraints = InputDescriptorConstraints(fields = listOf(InputDescriptorField(listOf("$.type"), filter = buildJsonObject {
+          put("const", "VerifiableId")
+        })))
+      )
+    )), responseMode = ResponseMode.direct_post)
+    verifierSession.authorizationRequest shouldNotBe null
+
+    val walletSession = testWallet.initializeAuthorization(verifierSession.authorizationRequest!!, 60)
+    val tokenResponse = testWallet.processImplicitFlowAuthorization(walletSession.authorizationRequest!!)
+    tokenResponse.vpToken shouldNotBe null
+    tokenResponse.presentationSubmission shouldNotBe null
+    val resp = ktorClient.submitForm(walletSession.authorizationRequest!!.responseUri!!,
+      parameters {
+        tokenResponse.toHttpParameters().forEach { entry ->
+          entry.value.forEach { append(entry.key, it) }
+        }
+      })
+    resp.status shouldBe HttpStatusCode.OK
   }
 
   val presentationDefinitionExample1 = "{\n" +
@@ -239,4 +311,7 @@ class VP_JVM_Test: AnnotationSpec() {
       "        }\n" +
       "    ]\n" +
       "}\n"
+
+  val mattrLaunchpadVerificationRequest = "openid4vp://authorize?client_id=https%3A%2F%2Flaunchpad.mattrlabs.com%2Fapi%2Fvp%2Fcallback&client_id_scheme=redirect_uri&response_uri=https%3A%2F%2Flaunchpad.mattrlabs.com%2Fapi%2Fvp%2Fcallback&response_type=vp_token&response_mode=direct_post&presentation_definition_uri=https%3A%2F%2Flaunchpad.mattrlabs.com%2Fapi%2Fvp%2Frequest%3Fstate%3D07d5wKEtyo_csmb0KzLFAQ&nonce=jWsDQF2OgbKa6yr3goVYqw&state=07d5wKEtyo_csmb0KzLFAQ"
+  val mattrLaunchpadPresentationDefinitionData = "{\"id\":\"vp token example\",\"input_descriptors\":[{\"id\":\"OpenBadgeCredential\",\"format\":{\"jwt_vc_json\":{\"alg\":[\"EdDSA\"]}},\"constraints\":{\"fields\":[{\"path\":[\"\$.type\"],\"filter\":{\"type\":\"string\",\"pattern\":\"OpenBadgeCredential\"}}]}}]}"
 }

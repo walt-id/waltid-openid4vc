@@ -27,6 +27,11 @@ import kotlinx.serialization.json.put
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 
+/**
+ * Base object for a self-issued OpenID provider, providing identity information by presenting verifiable credentials,
+ * in reply to OpenID4VP authorization requests.
+ * e.g.: Verifiable Credentials holder wallets
+ */
 abstract class SIOPCredentialProvider(
   baseUrl: String,
   override val config: SIOPProviderConfig
@@ -86,7 +91,7 @@ abstract class SIOPCredentialProvider(
       clientMetadata = authorizationRequest.clientMetadata
         ?: authorizationRequest.clientMetadataUri?.let {
           resolveJSON(it)?.let { OpenIDClientMetadata.fromJSON(it) }
-        } ?: throw AuthorizationError(authorizationRequest, AuthorizationErrorCode.invalid_client, message = "Invalid client metadata or client metadata could not be resolved.")
+        }
     )
     } catch (exc: SerializationException) {
       throw AuthorizationError(authorizationRequest, AuthorizationErrorCode.invalid_presentation_definition_reference)

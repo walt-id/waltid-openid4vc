@@ -18,7 +18,7 @@ data class AuthorizationRequest(
   val requestUri: String? = null,
   val presentationDefinition: PresentationDefinition? = null,
   val presentationDefinitionUri: String? = null,
-  val clientIdScheme: String? = null,
+  val clientIdScheme: ClientIdScheme? = null,
   val clientMetadata: OpenIDClientMetadata? = null,
   val clientMetadataUri: String? = null,
   val nonce: String? = null,
@@ -42,7 +42,7 @@ data class AuthorizationRequest(
       requestUri?.let { put("request_uri", listOf(it)) }
       presentationDefinition?.let { put("presentation_definition", listOf(it.toJSONString())) }
       presentationDefinitionUri?.let { put("presentation_definition_uri", listOf(it)) }
-      clientIdScheme?.let { put("client_id_scheme", listOf(it)) }
+      clientIdScheme?.let { put("client_id_scheme", listOf(it.value)) }
       clientMetadata?.let { put("client_metadata", listOf(it.toJSONString())) }
       clientMetadataUri?.let { put("client_metadata_uri", listOf(it)) }
       nonce?.let { put("nonce", listOf(it)) }
@@ -68,7 +68,7 @@ data class AuthorizationRequest(
         parameters["request_uri"]?.firstOrNull(),
         parameters["presentation_definition"]?.firstOrNull()?.let { PresentationDefinition.fromJSONString(it) },
         parameters["presentation_definition_uri"]?.firstOrNull(),
-        parameters["client_id_scheme"]?.firstOrNull(),
+        parameters["client_id_scheme"]?.firstOrNull()?.let { ClientIdScheme.fromValue(it) },
         parameters["client_metadata"]?.firstOrNull()?.let { OpenIDClientMetadata.fromJSONString(it) },
         parameters["client_metadata_uri"]?.firstOrNull(),
         parameters["nonce"]?.firstOrNull(),
