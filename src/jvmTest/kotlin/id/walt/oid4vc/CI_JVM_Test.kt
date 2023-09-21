@@ -543,6 +543,7 @@ class CI_JVM_Test : AnnotationSpec() {
         issuanceSession.credentialOffer!!.credentials.first() shouldBe instanceOf<JsonObject>()
 
         val offerRequest = CredentialOfferRequest(issuanceSession.credentialOffer!!)
+        println("offerRequest: $offerRequest")
 
         println("// create credential offer request url (this time cross-device)")
         val offerUri = ciTestProvider.getCredentialOfferRequestUrl(offerRequest)
