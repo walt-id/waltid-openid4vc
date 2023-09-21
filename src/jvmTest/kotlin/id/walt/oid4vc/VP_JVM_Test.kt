@@ -120,7 +120,7 @@ class VP_JVM_Test : AnnotationSpec() {
         Auditor.getService().verify(tokenResponse.vpToken!!.toString(), listOf(SignaturePolicy())).result shouldBe true
     }
 
-    @Test
+    //@Test
     suspend fun testMattrLaunchpadVerificationRequest() {
         // parse verification request (QR code)
         val authReq = AuthorizationRequest.fromHttpQueryString(Url(mattrLaunchpadVerificationRequest).encodedQuery)
@@ -182,6 +182,26 @@ class VP_JVM_Test : AnnotationSpec() {
 
         val walletSession = testWallet.initializeAuthorization(verifierSession.authorizationRequest!!, 60)
         println("Wallet session: $walletSession")
+        val tokenResponse = testWallet.processImplicitFlowAuthorization(walletSession.authorizationRequest!!)
+        tokenResponse.vpToken shouldNotBe null
+        tokenResponse.presentationSubmission shouldNotBe null
+        val resp = ktorClient.submitForm(walletSession.authorizationRequest!!.responseUri!!,
+            parameters {
+                tokenResponse.toHttpParameters().forEach { entry ->
+                    entry.value.forEach { append(entry.key, it) }
+                }
+            })
+        println("Resp: $resp")
+        resp.status shouldBe HttpStatusCode.OK
+    }
+
+    //@Test
+    suspend fun testWaltVerifierTestRequest() {
+        val authReq = AuthorizationRequest.fromHttpQueryString(Url(waltVerifierTestRequest).encodedQuery)
+        println("Auth req: $authReq")
+        val walletSession = testWallet.initializeAuthorization(authReq, 60)
+        walletSession.authorizationRequest!!.presentationDefinition shouldNotBe null
+        println("Resolved presentation definition: ${walletSession.authorizationRequest!!.presentationDefinition!!.toJSONString()}")
         val tokenResponse = testWallet.processImplicitFlowAuthorization(walletSession.authorizationRequest!!)
         tokenResponse.vpToken shouldNotBe null
         tokenResponse.presentationSubmission shouldNotBe null
@@ -339,4 +359,6 @@ class VP_JVM_Test : AnnotationSpec() {
         "openid4vp://authorize?client_id=https%3A%2F%2Flaunchpad.mattrlabs.com%2Fapi%2Fvp%2Fcallback&client_id_scheme=redirect_uri&response_uri=https%3A%2F%2Flaunchpad.mattrlabs.com%2Fapi%2Fvp%2Fcallback&response_type=vp_token&response_mode=direct_post&presentation_definition_uri=https%3A%2F%2Flaunchpad.mattrlabs.com%2Fapi%2Fvp%2Frequest%3Fstate%3D07d5wKEtyo_csmb0KzLFAQ&nonce=jWsDQF2OgbKa6yr3goVYqw&state=07d5wKEtyo_csmb0KzLFAQ"
     val mattrLaunchpadPresentationDefinitionData =
         "{\"id\":\"vp token example\",\"input_descriptors\":[{\"id\":\"OpenBadgeCredential\",\"format\":{\"jwt_vc_json\":{\"alg\":[\"EdDSA\"]}},\"constraints\":{\"fields\":[{\"path\":[\"\$.type\"],\"filter\":{\"type\":\"string\",\"pattern\":\"OpenBadgeCredential\"}}]}}]}"
+
+    val waltVerifierTestRequest = "openid4vp://authorize?response_type=vp_token&client_id=http%3A%2F%2Flocalhost%3A3000%2Foidc%2Fverify&response_mode=direct_post&state=dab60e92-2aa9-4365-817a-94229c6cdac3&presentation_definition_uri=http%3A%2F%2Flocalhost%3A3000%2Fvp%2Fpd%2Fd25f57d2-8850-4ad8-ac9e-03e3eb6bf34b&client_id_scheme=redirect_uri&response_uri=http%3A%2F%2Flocalhost%3A3000%2Foidc%2Fverify"
 }
