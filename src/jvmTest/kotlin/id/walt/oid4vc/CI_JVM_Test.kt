@@ -484,7 +484,8 @@ class CI_JVM_Test : AnnotationSpec() {
         location.parameters.names() shouldContain ResponseType.code.name
 
         println("// token req")
-        val tokenReq = TokenRequest(GrantType.authorization_code, testCIClientConfig.clientID, code = location.parameters[ResponseType.code.name]!!)
+        val tokenReq =
+            TokenRequest(GrantType.authorization_code, testCIClientConfig.clientID, code = location.parameters[ResponseType.code.name]!!)
         println("tokenReq: $tokenReq")
 
         val tokenResp = ktorClient.submitForm(
@@ -578,8 +579,11 @@ class CI_JVM_Test : AnnotationSpec() {
         println("// fetch access token using pre-authorized code (skipping authorization step)")
         println("// try without user PIN, should be rejected!")
         var tokenReq = TokenRequest(
-            GrantType.pre_authorized_code, testCIClientConfig.clientID, credentialWallet.config.redirectUri,
-            preAuthorizedCode = parsedOfferReq.credentialOffer!!.grants[GrantType.pre_authorized_code.value]!!.preAuthorizedCode
+            grantType = GrantType.pre_authorized_code,
+            clientId = testCIClientConfig.clientID,
+            redirectUri = credentialWallet.config.redirectUri,
+            preAuthorizedCode = parsedOfferReq.credentialOffer!!.grants[GrantType.pre_authorized_code.value]!!.preAuthorizedCode,
+            userPin = null
         )
         println("tokenReq: $tokenReq")
 
@@ -591,8 +595,11 @@ class CI_JVM_Test : AnnotationSpec() {
         tokenResp.isSuccess shouldBe false
         tokenResp.error shouldBe TokenErrorCode.invalid_grant.name
 
+        println("// try with user PIN, should work:")
         tokenReq = TokenRequest(
-            GrantType.pre_authorized_code, testCIClientConfig.clientID, credentialWallet.config.redirectUri,
+            grantType = GrantType.pre_authorized_code,
+            clientId = testCIClientConfig.clientID,
+            redirectUri = credentialWallet.config.redirectUri,
             preAuthorizedCode = parsedOfferReq.credentialOffer!!.grants[GrantType.pre_authorized_code.value]!!.preAuthorizedCode,
             userPin = issuanceSession.preAuthUserPin
         )
