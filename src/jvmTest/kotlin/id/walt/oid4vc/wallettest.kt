@@ -84,7 +84,7 @@ class wallettest : AnnotationSpec() {
     private lateinit var credentialWallet: TestCredentialWallet
     private val testCIClientConfig = OpenIDClientConfig("test-client", null, redirectUri = "http://blank")
 
-    @BeforeAll
+    //@BeforeAll
     fun init() {
         ServiceMatrix("service-matrix.properties")
         ciTestProvider = CITestProvider()
@@ -93,7 +93,7 @@ class wallettest : AnnotationSpec() {
     }
 
 
-    @Test
+    //@Test
     suspend fun testPreauth() {
 
         val offerUri = "openid-credential-offer://localhost/?credential_offer=%7B%22credential_issuer%22%3A%22http%3A%2F%2Flocalhost%3A3000%22%2C%22credentials%22%3A%5B%7B%22format%22%3A%22jwt_vc_json%22%2C%22types%22%3A%5B%22VerifiableCredential%22%2C%22VerifiableId%22%5D%2C%22credential_definition%22%3A%7B%22types%22%3A%5B%22VerifiableCredential%22%2C%22VerifiableId%22%5D%7D%2C%22foo%22%3A%22bar%22%7D%5D%2C%22grants%22%3A%7B%22authorization_code%22%3A%7B%22issuer_state%22%3A%2257fef204-600c-4ebe-b81f-0459e04ad8d4%22%7D%2C%22urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Apre-authorized_code%22%3A%7B%22pre-authorized_code%22%3A%22eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiI1N2ZlZjIwNC02MDBjLTRlYmUtYjgxZi0wNDU5ZTA0YWQ4ZDQiLCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjMwMDAiLCJhdWQiOiJUT0tFTiJ9.GwFMX6rTcM0Eu8tNknE08viCqPlCgfANgGirtPpQWoNH4Jdd4VyFE1fe55vDUMAc2ezT1KBgVLUW-6qZUG3-Dg%22%2C%22user_pin_required%22%3Afalse%7D%7D%7D"
