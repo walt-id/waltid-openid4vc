@@ -2,6 +2,7 @@ package id.walt.oid4vc
 
 import id.walt.auditor.Auditor
 import id.walt.auditor.policies.SignaturePolicy
+import id.walt.oid4vc.data.ResponseMode
 import id.walt.oid4vc.data.dif.PresentationDefinition
 import id.walt.oid4vc.providers.CredentialVerifierConfig
 import id.walt.oid4vc.providers.OpenIDCredentialVerifier
@@ -40,7 +41,11 @@ class VPTestVerifier: OpenIDCredentialVerifier(
     return "$VP_VERIFIER_BASE_URL/pd/${cachedPresDef.id}"
   }
 
-  override fun verifyVpToken(tokenResponse: TokenResponse): Boolean {
+  override fun prepareResponseOrRedirectUri(sessionID: String, responseMode: ResponseMode): String {
+    return super.prepareResponseOrRedirectUri(sessionID, responseMode).plus("/$sessionID")
+  }
+
+  override fun doVerify(tokenResponse: TokenResponse, session: PresentationSession): Boolean {
     return tokenResponse.vpToken != null && Auditor.getService().verify(tokenResponse.vpToken!!.toString(), listOf(SignaturePolicy())).result
   }
 
@@ -58,13 +63,15 @@ class VPTestVerifier: OpenIDCredentialVerifier(
             call.respond(HttpStatusCode.NotFound)
           }
         }
-        post("/verify") {
+        post("/verify/{state}") {
+          val state = call.parameters["state"]
+          val session = state?.let { getSession(it) }
           val params = call.receiveParameters()
           val tokenResponse = TokenResponse.fromHttpParameters(params.toMap())
-          if(tokenResponse.vpToken == null || tokenResponse.presentationSubmission == null) {
-            call.respond(HttpStatusCode.BadRequest, "vp_token and/or presentation_submission missing")
+          if(tokenResponse.vpToken == null || tokenResponse.presentationSubmission == null || session == null) {
+            call.respond(HttpStatusCode.BadRequest, "vp_token and/or presentation_submission missing, or invalid session state given.")
           }
-          else if(verifyVpToken(tokenResponse)) {
+          else if(verify(tokenResponse, session).verificationResult == true) {
             call.respond(HttpStatusCode.OK)
           } else {
             call.respond(HttpStatusCode.BadRequest, "token response could not be verified")

@@ -20,6 +20,11 @@ abstract class OpenIDCredentialVerifier(val config: CredentialVerifierConfig):
    */
   protected open fun preparePresentationDefinitionUri(presentationDefinition: PresentationDefinition, sessionID: String): String? = null
 
+  protected open fun prepareResponseOrRedirectUri(sessionID: String, responseMode: ResponseMode): String = when(responseMode) {
+    ResponseMode.query, ResponseMode.fragment, ResponseMode.form_post -> config.redirectUri ?: config.clientId
+    else -> config.responseUrl ?: config.clientId
+  }
+
   open fun initializeAuthorization(
     presentationDefinition: PresentationDefinition,
     responseMode: ResponseMode = ResponseMode.fragment,
@@ -38,11 +43,11 @@ abstract class OpenIDCredentialVerifier(val config: CredentialVerifierConfig):
       clientId = config.clientId,
       responseMode = responseMode,
       redirectUri = when(responseMode) {
-        ResponseMode.query, ResponseMode.fragment, ResponseMode.form_post -> config.redirectUri ?: config.clientId
+        ResponseMode.query, ResponseMode.fragment, ResponseMode.form_post -> prepareResponseOrRedirectUri(session.id, responseMode)
         else -> null
       },
       responseUri = when(responseMode) {
-        ResponseMode.direct_post -> config.responseUrl ?: config.clientId
+        ResponseMode.direct_post -> prepareResponseOrRedirectUri(session.id, responseMode)
         else -> null
       },
       presentationDefinitionUri = presentationDefinitionUri,
@@ -59,5 +64,14 @@ abstract class OpenIDCredentialVerifier(val config: CredentialVerifierConfig):
     }
   }
 
-  protected abstract fun verifyVpToken(tokenResponse: TokenResponse): Boolean
+  open fun verify(tokenResponse: TokenResponse, session: PresentationSession): PresentationSession {
+    return session.copy(
+      tokenResponse = tokenResponse,
+      verificationResult = doVerify(tokenResponse, session)
+    ).also {
+      putSession(it.id, it)
+    }
+  }
+
+  protected abstract fun doVerify(tokenResponse: TokenResponse, session: PresentationSession): Boolean
 }
