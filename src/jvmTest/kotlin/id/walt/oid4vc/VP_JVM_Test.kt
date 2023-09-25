@@ -360,5 +360,5 @@ class VP_JVM_Test : AnnotationSpec() {
     val mattrLaunchpadPresentationDefinitionData =
         "{\"id\":\"vp token example\",\"input_descriptors\":[{\"id\":\"OpenBadgeCredential\",\"format\":{\"jwt_vc_json\":{\"alg\":[\"EdDSA\"]}},\"constraints\":{\"fields\":[{\"path\":[\"\$.type\"],\"filter\":{\"type\":\"string\",\"pattern\":\"OpenBadgeCredential\"}}]}}]}"
 
-    val waltVerifierTestRequest = "openid4vp://authorize?response_type=vp_token&client_id=https%3A%2F%2Fverifier.portal.walt.id%2Foidc%2Fverify&response_mode=direct_post&state=afe1b596-b9ec-493a-b549-c09a333937ed&presentation_definition_uri=https%3A%2F%2Fverifier.portal.walt.id%2Fvp%2Fpd%2F245251db-d77c-4353-8e6f-6f1c94d20276&client_id_scheme=redirect_uri&response_uri=https%3A%2F%2Fverifier.portal.walt.id%2Foidc%2Fverify"
+    val waltVerifierTestRequest = "openid4vp://authorize?response_type=vp_token&client_id=http%3A%2F%2Flocalhost%3A3000%2Foidc%2Fverify&response_mode=direct_post&state=cc19d8c7-43e8-48bb-ae41-7b4b921953e0&presentation_definition_uri=http%3A%2F%2Flocalhost%3A3000%2Fvp%2Fpd%2Fcc19d8c7-43e8-48bb-ae41-7b4b921953e0&client_id_scheme=redirect_uri&response_uri=http%3A%2F%2Flocalhost%3A3000%2Foidc%2Fverify%2Fcc19d8c7-43e8-48bb-ae41-7b4b921953e0"
 }
