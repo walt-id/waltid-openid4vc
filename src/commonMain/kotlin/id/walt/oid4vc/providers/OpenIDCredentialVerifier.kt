@@ -12,7 +12,7 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.plus
 
 abstract class OpenIDCredentialVerifier(val config: CredentialVerifierConfig):
-  ISessionCache<SIOPSession> {
+  ISessionCache<PresentationSession> {
 
   /**
    * Override this method to cache presentation definition and append it to authorization request by reference
@@ -24,8 +24,12 @@ abstract class OpenIDCredentialVerifier(val config: CredentialVerifierConfig):
     presentationDefinition: PresentationDefinition,
     responseMode: ResponseMode = ResponseMode.fragment,
     scope: Set<String> = setOf(),
-    expiresIn: Int = 60): SIOPSession {
-    val session = SIOPSession(randomUUID(), null, Clock.System.now().plus(expiresIn, DateTimeUnit.SECOND).epochSeconds).also {
+    expiresIn: Int = 60): PresentationSession {
+    val session = PresentationSession(
+      randomUUID(),
+      null,
+      Clock.System.now().plus(expiresIn, DateTimeUnit.SECOND).epochSeconds,
+      presentationDefinition).also {
       putSession(it.id, it)
     }
     val presentationDefinitionUri = preparePresentationDefinitionUri(presentationDefinition, session.id)

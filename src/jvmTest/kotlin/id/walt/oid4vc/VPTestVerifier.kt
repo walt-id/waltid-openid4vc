@@ -5,7 +5,7 @@ import id.walt.auditor.policies.SignaturePolicy
 import id.walt.oid4vc.data.dif.PresentationDefinition
 import id.walt.oid4vc.providers.CredentialVerifierConfig
 import id.walt.oid4vc.providers.OpenIDCredentialVerifier
-import id.walt.oid4vc.providers.SIOPSession
+import id.walt.oid4vc.providers.PresentationSession
 import id.walt.oid4vc.responses.TokenResponse
 import id.walt.oid4vc.util.randomUUID
 import io.ktor.http.*
@@ -26,15 +26,15 @@ class VPTestVerifier: OpenIDCredentialVerifier(
   CredentialVerifierConfig("$VP_VERIFIER_BASE_URL/verify")
 ) {
 
-  private val sessionCache = mutableMapOf<String, SIOPSession>()
+  private val sessionCache = mutableMapOf<String, PresentationSession>()
   private val presentationDefinitionCache = mutableMapOf<String, PresentationDefinition>()
-  override fun getSession(id: String): SIOPSession? = sessionCache[id]
+  override fun getSession(id: String): PresentationSession? = sessionCache[id]
 
-  override fun putSession(id: String, session: SIOPSession): SIOPSession? = sessionCache.put(id, session)
+  override fun putSession(id: String, session: PresentationSession): PresentationSession? = sessionCache.put(id, session)
 
-  override fun removeSession(id: String): SIOPSession? = sessionCache.remove(id)
+  override fun removeSession(id: String): PresentationSession? = sessionCache.remove(id)
 
-  override fun preparePresentationDefinitionUri(presentationDefinition: PresentationDefinition, sessionID: String): String? {
+  override fun preparePresentationDefinitionUri(presentationDefinition: PresentationDefinition, sessionID: String): String {
     val cachedPresDef = presentationDefinition.copy(id = randomUUID())
     presentationDefinitionCache.put(cachedPresDef.id, presentationDefinition)
     return "$VP_VERIFIER_BASE_URL/pd/${cachedPresDef.id}"
