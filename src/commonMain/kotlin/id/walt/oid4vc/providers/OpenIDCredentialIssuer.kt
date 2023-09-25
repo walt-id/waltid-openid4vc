@@ -190,7 +190,7 @@ abstract class OpenIDCredentialIssuer(
                 credentialRequest,
                 session,
                 CredentialErrorCode.unsupported_credential_type,
-                "Credential type not supported"
+                "Credential type not supported: format=${credentialRequest.format}, types=$types, docType=${credentialRequest.docType}"
             )
 
         // TODO: validate if requested credential was authorized

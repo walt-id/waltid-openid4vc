@@ -10,7 +10,6 @@ import id.walt.oid4vc.requests.CredentialOfferRequest
 import id.walt.oid4vc.requests.CredentialRequest
 import id.walt.oid4vc.requests.TokenRequest
 import id.walt.oid4vc.responses.CredentialResponse
-import id.walt.oid4vc.responses.TokenErrorCode
 import id.walt.oid4vc.responses.TokenResponse
 import id.walt.servicematrix.ServiceMatrix
 import io.kotest.core.spec.style.AnnotationSpec
@@ -33,47 +32,14 @@ import kotlinx.serialization.json.jsonPrimitive
 
 class wallettest : AnnotationSpec() {
 
-    var testMetadata = OpenIDProviderMetadata(
-        authorizationEndpoint = "https://localhost/oidc",
-        credentialsSupported = listOf(
-            CredentialSupported(
-                CredentialFormat.jwt_vc_json, "jwt_vc_json_fmt", setOf("did"), setOf("ES256K"),
-                listOf(
-                    DisplayProperties(
-                        "University Credential",
-                        "en-US",
-                        LogoProperties("https://exampleuniversity.com/public/logo.png", "a square logo of a university"),
-                        backgroundColor = "#12107c", textColor = "#FFFFFF"
-                    )
-                ),
-                types = listOf("VerifiableCredential", "UniversityDegreeCredential"),
-                credentialSubject = mapOf(
-                    "name" to ClaimDescriptor(
-                        mandatory = false,
-                        display = listOf(DisplayProperties("Full Name")),
-                        customParameters = mapOf(
-                            "firstName" to ClaimDescriptor(
-                                valueType = "string",
-                                display = listOf(DisplayProperties("First Name"))
-                            ).toJSON(),
-                            "lastName" to ClaimDescriptor(valueType = "string", display = listOf(DisplayProperties("Last Name"))).toJSON()
-                        )
-                    )
-                )
-            ),
-            CredentialSupported(
-                CredentialFormat.ldp_vc, "ldp_vc_1", setOf("did"), setOf("ES256K"),
-                listOf(DisplayProperties("Verifiable ID")),
-                types = listOf("VerifiableCredential", "VerifiableId"),
-                context = listOf(
-                    JsonPrimitive("https://www.w3.org/2018/credentials/v1"),
-                    JsonObject(mapOf("@version" to JsonPrimitive(1.1)))
-                )
-            )
-        )
-    )
+    /*
+     * Instructions to use:
+     * 1. Uncomment the @BeforeAll (at `fun init`) and @Test at `fun testPreauth`
+     * 2. Update `val offerUri = "openid-credential-offer://..."`
+     * 3. Run test "wallettest" (this file)
+     */
 
-    val ktorClient = HttpClient(CIO) {
+    private val ktorClient = HttpClient(CIO) {
         install(ContentNegotiation) {
             json()
         }
@@ -84,7 +50,7 @@ class wallettest : AnnotationSpec() {
     private lateinit var credentialWallet: TestCredentialWallet
     private val testCIClientConfig = OpenIDClientConfig("test-client", null, redirectUri = "http://blank")
 
-    //@BeforeAll
+    //@BeforeAll   /* Uncomment me */
     fun init() {
         ServiceMatrix("service-matrix.properties")
         ciTestProvider = CITestProvider()
@@ -92,12 +58,11 @@ class wallettest : AnnotationSpec() {
         ciTestProvider.start()
     }
 
-
-    //@Test
+    //@Test   /* Uncomment me */
     suspend fun testPreauth() {
-
-        val offerUri = "openid-credential-offer://localhost/?credential_offer=%7B%22credential_issuer%22%3A%22http%3A%2F%2Flocalhost%3A3000%22%2C%22credentials%22%3A%5B%7B%22format%22%3A%22jwt_vc_json%22%2C%22types%22%3A%5B%22VerifiableCredential%22%2C%22VerifiableId%22%5D%2C%22credential_definition%22%3A%7B%22types%22%3A%5B%22VerifiableCredential%22%2C%22VerifiableId%22%5D%7D%2C%22foo%22%3A%22bar%22%7D%5D%2C%22grants%22%3A%7B%22authorization_code%22%3A%7B%22issuer_state%22%3A%2257fef204-600c-4ebe-b81f-0459e04ad8d4%22%7D%2C%22urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Apre-authorized_code%22%3A%7B%22pre-authorized_code%22%3A%22eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiI1N2ZlZjIwNC02MDBjLTRlYmUtYjgxZi0wNDU5ZTA0YWQ4ZDQiLCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjMwMDAiLCJhdWQiOiJUT0tFTiJ9.GwFMX6rTcM0Eu8tNknE08viCqPlCgfANgGirtPpQWoNH4Jdd4VyFE1fe55vDUMAc2ezT1KBgVLUW-6qZUG3-Dg%22%2C%22user_pin_required%22%3Afalse%7D%7D%7D"
-
+        // vvv UPDATE BELOW URL WITH OFFER_URI vvv
+        val offerUri = "openid-credential-offer://localhost/?credential_offer=%7B%22credential_issuer%22%3A%22http%3A%2F%2Flocalhost%3A3000%22%2C%22credentials%22%3A%5B%7B%22format%22%3A%22jwt_vc_json%22%2C%22types%22%3A%5B%22VerifiableCredential%22%2C%22OpenBadgeCredential%22%5D%2C%22credential_definition%22%3A%7B%22%40context%22%3A%5B%22https%3A%2F%2Fwww.w3.org%2F2018%2Fcredentials%2Fv1%22%2C%22https%3A%2F%2Fpurl.imsglobal.org%2Fspec%2Fob%2Fv3p0%2Fcontext.json%22%5D%2C%22types%22%3A%5B%22VerifiableCredential%22%2C%22OpenBadgeCredential%22%5D%7D%7D%5D%2C%22grants%22%3A%7B%22authorization_code%22%3A%7B%22issuer_state%22%3A%22fdc39e8d-973c-4dd1-9270-f38dd504cbe4%22%7D%2C%22urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Apre-authorized_code%22%3A%7B%22pre-authorized_code%22%3A%22eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiJmZGMzOWU4ZC05NzNjLTRkZDEtOTI3MC1mMzhkZDUwNGNiZTQiLCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjMwMDAiLCJhdWQiOiJUT0tFTiJ9._LFdtxLPr7rk43s_70lsUvQMctHyNQNKY79IjNMeCyHwgnkwtsmp7ncWEmF14T2v17aLKxwFHN0Eg8JcT6EeCQ%22%2C%22user_pin_required%22%3Afalse%7D%7D%7D"
+        // ^^^ UPDATE ABOVE URL WITH OFFER_URI ^^^
 
         println("// -------- WALLET ----------")
         println("// as WALLET: receive credential offer, either being called via deeplink or by scanning QR code")
@@ -122,7 +87,6 @@ class wallettest : AnnotationSpec() {
         println("offeredCredentials: $offeredCredentials")
         offeredCredentials.size shouldBe 1
         offeredCredentials.first().format shouldBe CredentialFormat.jwt_vc_json
-        offeredCredentials.first().types?.last() shouldBe "VerifiableId"
         val offeredCredential = offeredCredentials.first()
         println("offeredCredentials[0]: $offeredCredential")
 
@@ -141,6 +105,7 @@ class wallettest : AnnotationSpec() {
         ).body<JsonObject>().let { TokenResponse.fromJSON(it) }
         println("tokenResp: $tokenResp")
 
+        println(">>> Token response = success: ${tokenResp.isSuccess}")
         tokenResp.isSuccess shouldBe true
         tokenResp.accessToken shouldNotBe null
         tokenResp.cNonce shouldNotBe null
