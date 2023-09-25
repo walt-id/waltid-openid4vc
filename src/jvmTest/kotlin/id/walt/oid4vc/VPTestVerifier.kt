@@ -34,7 +34,7 @@ class VPTestVerifier: OpenIDCredentialVerifier(
 
   override fun removeSession(id: String): SIOPSession? = sessionCache.remove(id)
 
-  override fun preparePresentationDefinitionUri(presentationDefinition: PresentationDefinition): String? {
+  override fun preparePresentationDefinitionUri(presentationDefinition: PresentationDefinition, sessionID: String): String? {
     val cachedPresDef = presentationDefinition.copy(id = randomUUID())
     presentationDefinitionCache.put(cachedPresDef.id, presentationDefinition)
     return "$VP_VERIFIER_BASE_URL/pd/${cachedPresDef.id}"

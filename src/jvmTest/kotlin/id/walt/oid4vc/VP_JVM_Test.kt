@@ -195,7 +195,7 @@ class VP_JVM_Test : AnnotationSpec() {
         resp.status shouldBe HttpStatusCode.OK
     }
 
-    //@Test
+    @Test
     suspend fun testWaltVerifierTestRequest() {
         val authReq = AuthorizationRequest.fromHttpQueryString(Url(waltVerifierTestRequest).encodedQuery)
         println("Auth req: $authReq")
@@ -360,5 +360,5 @@ class VP_JVM_Test : AnnotationSpec() {
     val mattrLaunchpadPresentationDefinitionData =
         "{\"id\":\"vp token example\",\"input_descriptors\":[{\"id\":\"OpenBadgeCredential\",\"format\":{\"jwt_vc_json\":{\"alg\":[\"EdDSA\"]}},\"constraints\":{\"fields\":[{\"path\":[\"\$.type\"],\"filter\":{\"type\":\"string\",\"pattern\":\"OpenBadgeCredential\"}}]}}]}"
 
-    val waltVerifierTestRequest = "openid4vp://authorize?response_type=vp_token&client_id=http%3A%2F%2Flocalhost%3A3000%2Foidc%2Fverify&response_mode=direct_post&state=dab60e92-2aa9-4365-817a-94229c6cdac3&presentation_definition_uri=http%3A%2F%2Flocalhost%3A3000%2Fvp%2Fpd%2Fd25f57d2-8850-4ad8-ac9e-03e3eb6bf34b&client_id_scheme=redirect_uri&response_uri=http%3A%2F%2Flocalhost%3A3000%2Foidc%2Fverify"
+    val waltVerifierTestRequest = "openid4vp://authorize?response_type=vp_token&client_id=https%3A%2F%2Fverifier.portal.walt.id%2Foidc%2Fverify&response_mode=direct_post&state=bda6d96c-d991-46fa-9e84-df2c9be8a2a3&presentation_definition_uri=https%3A%2F%2Fverifier.portal.walt.id%2Fvp%2Fpd%2F0462b1b6-aaa2-4070-a098-37c13a43b421&client_id_scheme=redirect_uri&response_uri=https%3A%2F%2Fverifier.portal.walt.id%2Foidc%2Fverify"
 }
