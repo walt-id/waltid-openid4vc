@@ -43,14 +43,14 @@ abstract class SIOPCredentialProvider(
    */
   abstract fun resolveDID(did: String): String
 
-  open fun generateDidProof(did: String, issuerUrl: String, nonce: String, client: OpenIDClientConfig? = null): ProofOfPossession {
+  open fun generateDidProof(did: String, issuerUrl: String, nonce: String?, client: OpenIDClientConfig? = null): ProofOfPossession {
     val keyId = resolveDID(did)
     return ProofOfPossession(
       jwt = signToken(TokenTarget.PROOF_OF_POSSESSION, buildJsonObject {
         client?.let { put(JWTClaims.Payload.issuer, it.clientID) }
         put(JWTClaims.Payload.audience, issuerUrl)
         put(JWTClaims.Payload.issuedAtTime, Clock.System.now().epochSeconds)
-        put(JWTClaims.Payload.nonce, nonce)
+        nonce?.let { put(JWTClaims.Payload.nonce, it) }
       }, header = buildJsonObject {
         put(JWTClaims.Header.keyID, keyId)
       }, keyId = keyId)

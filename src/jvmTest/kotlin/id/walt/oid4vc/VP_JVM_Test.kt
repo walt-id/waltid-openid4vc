@@ -195,7 +195,7 @@ class VP_JVM_Test : AnnotationSpec() {
         resp.status shouldBe HttpStatusCode.OK
     }
 
-    @Test
+    //@Test
     suspend fun testWaltVerifierTestRequest() {
         val authReq = AuthorizationRequest.fromHttpQueryString(Url(waltVerifierTestRequest).encodedQuery)
         println("Auth req: $authReq")

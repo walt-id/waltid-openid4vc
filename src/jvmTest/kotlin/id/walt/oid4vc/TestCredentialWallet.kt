@@ -70,7 +70,7 @@ class TestCredentialWallet(
     ))
   }
 
-  val TEST_DID: String = DidService.create(DidMethod.jwk)
+  val TEST_DID: String = DidService.create(DidMethod.key)
 
   override fun resolveDID(did: String): String {
     val didObj = DidService.resolve(did)
