@@ -184,7 +184,7 @@ abstract class OpenIDCredentialIssuer(
             )
 
         // check types, credential_definition.types, docType, one of them must be supported
-        val types = credentialRequest.types ?: credentialRequest.credentialDefinition?.types
+        /*val types = credentialRequest.types ?: credentialRequest.credentialDefinition?.types
         if (!isCredentialTypeSupported(credentialRequest.format, types, credentialRequest.docType))
             throw createCredentialError(
                 credentialRequest,
@@ -192,6 +192,8 @@ abstract class OpenIDCredentialIssuer(
                 CredentialErrorCode.unsupported_credential_type,
                 "Credential type not supported: format=${credentialRequest.format}, types=$types, docType=${credentialRequest.docType}"
             )
+
+         */
 
         // TODO: validate if requested credential was authorized
         //  (by authorization details, or credential offer, or scope)
@@ -296,8 +298,12 @@ abstract class OpenIDCredentialIssuer(
         offerRequest: CredentialOfferRequest,
         walletCredentialOfferEndpoint: String = CROSS_DEVICE_CREDENTIAL_OFFER_URL
     ): String {
-        return URLBuilder(walletCredentialOfferEndpoint).apply {
+        val url = URLBuilder(walletCredentialOfferEndpoint).apply {
             parameters.appendAll(parametersOf(offerRequest.toHttpParameters()))
         }.buildString()
+
+        println("CREATED URL: $url")
+
+        return url
     }
 }
