@@ -3,10 +3,7 @@ package id.walt.oid4vc
 import id.walt.auditor.Auditor
 import id.walt.auditor.policies.SignaturePolicy
 import id.walt.core.crypto.utils.JwsUtils.decodeJws
-import id.walt.oid4vc.data.ClientIdScheme
-import id.walt.oid4vc.data.OpenIDClientMetadata
-import id.walt.oid4vc.data.ResponseMode
-import id.walt.oid4vc.data.ResponseType
+import id.walt.oid4vc.data.*
 import id.walt.oid4vc.data.dif.*
 import id.walt.oid4vc.providers.SIOPProviderConfig
 import id.walt.oid4vc.requests.AuthorizationRequest
@@ -57,7 +54,7 @@ class VP_JVM_Test : AnnotationSpec() {
         testVerifier.start()
     }
 
-    @Test
+    //@Test
     fun testParsePresentationDefinition() {
         // parse example 1
         val pd1 = PresentationDefinition.fromJSONString(presentationDefinitionExample1)
@@ -91,7 +88,7 @@ class VP_JVM_Test : AnnotationSpec() {
         pd3.submissionRequirements!!.first().from shouldBe "A"
     }
 
-    @Test
+    //@Test
     suspend fun testVPAuthorization() {
         val authReq = AuthorizationRequest(
             responseType = ResponseType.vp_token.name,

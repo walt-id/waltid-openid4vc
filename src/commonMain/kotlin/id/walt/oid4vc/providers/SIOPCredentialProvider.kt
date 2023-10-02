@@ -79,9 +79,10 @@ abstract class SIOPCredentialProvider(
     protected abstract fun isPresentationDefinitionSupported(presentationDefinition: PresentationDefinition): Boolean
 
     override fun validateAuthorizationRequest(authorizationRequest: AuthorizationRequest): Boolean {
-        return authorizationRequest.responseType == ResponseType.vp_token.name &&
+        return (authorizationRequest.responseType == ResponseType.vp_token.name &&
                 authorizationRequest.presentationDefinition != null &&
                 isPresentationDefinitionSupported(authorizationRequest.presentationDefinition)
+            ) //|| true // FIXME
     }
 
     protected open fun resolveVPAuthorizationParameters(authorizationRequest: AuthorizationRequest): AuthorizationRequest {
