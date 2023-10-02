@@ -81,6 +81,46 @@ class TestCredentialWallet(
                 ?: throw IllegalArgumentException("VerifiablePresentation does not contain verifiableCredential list?"))
                 .jsonArray.map { it.jsonPrimitive.content }
 
+        //language=JSON
+        val tmpSubmission = """
+        {
+          "id": "submission 1",
+          "definition_id": "0279fde1-7db6-4bd1-b131-b5a1d340e125",
+          "descriptor_map": [
+            {
+              "id": "OpenBadgeCredential",
+              "format": "jwt_vp_json",
+              "path": "$",
+              "path_nested": {
+                "format": "jwt_vc_json",
+                "path": "$.verifiableCredential[0]"
+              }
+            }
+          ]
+        }
+        """
+
+        //language=JSON
+        val tmpSubmission2 = """
+            {
+              "id": "Example submission",
+              "definition_id": "000011f4-0b48-4ab3-86fe-d74833f6d0d9",
+              "descriptor_map": [
+                {
+                  "id": "OpenBadgeCredential",
+                  "format": "jwt_vp_json",
+                  "path": "$",
+                  "path_nested": {
+                    "format": "jwt_vc_json",
+                    "path": "$.vp.verifiableCredential[0]"
+                  }
+                }
+              ]
+            }
+        """.trimIndent()
+
+
+
         return PresentationResult(
             listOf(JsonPrimitive(presentationJwtStr)), PresentationSubmission(
                 id = "submission 1",

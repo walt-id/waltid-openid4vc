@@ -24,13 +24,14 @@ repositories {
             includeGroup("id.walt")
         }
     }
+    maven("https://repo.danubetech.com/repository/maven-public/")
     maven("https://maven.walt.id/repository/waltid/") {
         content {
             includeGroup("id.walt")
             includeGroup("id.walt.servicematrix")
-            includeGroup("info.weboftrust")
+            //includeGroup("info.weboftrust")
             includeGroup("decentralized-identity")
-            includeGroup("com.danubetech")
+            //includeGroup("com.danubetech")
         }
     }
     mavenLocal()

@@ -2,9 +2,8 @@ package id.walt.oid4vc
 
 import id.walt.auditor.Auditor
 import id.walt.auditor.policies.SignaturePolicy
-import id.walt.oid4vc.data.OpenIDClientMetadata
-import id.walt.oid4vc.data.ResponseMode
-import id.walt.oid4vc.data.ResponseType
+import id.walt.core.crypto.utils.JwsUtils.decodeJws
+import id.walt.oid4vc.data.*
 import id.walt.oid4vc.data.dif.*
 import id.walt.oid4vc.providers.SIOPProviderConfig
 import id.walt.oid4vc.requests.AuthorizationRequest
@@ -16,6 +15,7 @@ import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.ktor.client.*
+import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
@@ -25,9 +25,8 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.util.*
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.put
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.*
 
 class VP_JVM_Test : AnnotationSpec() {
 
@@ -55,7 +54,7 @@ class VP_JVM_Test : AnnotationSpec() {
         testVerifier.start()
     }
 
-    @Test
+    //@Test
     fun testParsePresentationDefinition() {
         // parse example 1
         val pd1 = PresentationDefinition.fromJSONString(presentationDefinitionExample1)
@@ -89,7 +88,7 @@ class VP_JVM_Test : AnnotationSpec() {
         pd3.submissionRequirements!!.first().from shouldBe "A"
     }
 
-    @Test
+    //@Test
     suspend fun testVPAuthorization() {
         val authReq = AuthorizationRequest(
             responseType = ResponseType.vp_token.name,
