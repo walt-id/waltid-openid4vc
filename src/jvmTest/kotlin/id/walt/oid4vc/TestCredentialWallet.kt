@@ -1,5 +1,6 @@
 package id.walt.oid4vc
 
+import id.walt.core.crypto.utils.JwsUtils.decodeJws
 import id.walt.credentials.w3c.PresentableCredential
 import id.walt.custodian.Custodian
 import id.walt.model.DidMethod
@@ -36,8 +37,7 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.*
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.*
 
 const val WALLET_PORT = 8001
 const val WALLET_BASE_URL = "http://localhost:${WALLET_PORT}"
@@ -62,21 +62,42 @@ class TestCredentialWallet(
     override fun generatePresentation(presentationDefinition: PresentationDefinition): PresentationResult {
         // find credential(s) matching the presentation definition
         // for this test wallet implementation, present all credentials in the wallet
-        val presentation = Custodian.getService()
+        val presentationJwtStr = Custodian.getService()
             .createPresentation(Custodian.getService().listCredentials().map { PresentableCredential(it) }, TEST_DID)
 
         println("================")
-        println("PRESENTATION IS: $presentation")
+        println("PRESENTATION IS: $presentationJwtStr")
         println("================")
 
+        val presentationJws = presentationJwtStr.decodeJws()
+        val jwtCredentials =
+            ((presentationJws.payload["vp"]
+                ?: throw IllegalArgumentException("VerifiablePresentation string does not contain `vp` attribute?"))
+                .jsonObject["verifiableCredential"]
+                ?: throw IllegalArgumentException("VerifiablePresentation does not contain verifiableCredential list?"))
+                .jsonArray.map { it.jsonPrimitive.content }
+
         return PresentationResult(
-            listOf(Json.parseToJsonElement(presentation)), PresentationSubmission(
-                "submission 1", presentationDefinition.id,
-                listOf(
+            listOf(JsonPrimitive(presentationJwtStr)), PresentationSubmission(
+                id = "submission 1",
+                definitionId = presentationDefinition.id,
+                descriptorMap = jwtCredentials.mapIndexed { index, vcJwsStr ->
+
+                    val vcJws = vcJwsStr.decodeJws()
+                    val type =
+                        vcJws.payload["vc"]?.jsonObject?.get("type")?.jsonArray?.last()?.jsonPrimitive?.contentOrNull
+                            ?: "VerifiableCredential"
+
                     DescriptorMapping(
-                        "presentation 1", VCFormat.jwt_vc, "$"
+                        id = type,
+                        format = VCFormat.jwt_vp_json,  // jwt_vp_json
+                        path = "$[$index]",
+                        pathNested = DescriptorMapping(
+                            format = VCFormat.jwt_vc_json,
+                            path = "$[$index].vp.verifiableCredential[0]",
+                        )
                     )
-                )
+                }
             )
         )
     }

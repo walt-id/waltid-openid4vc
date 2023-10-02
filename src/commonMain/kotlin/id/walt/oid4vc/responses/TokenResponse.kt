@@ -93,7 +93,13 @@ data class TokenResponse private constructor(
             expiresIn?.let { put("expires_in", listOf(it.toString())) }
             refreshToken?.let { put("refresh_token", listOf(it)) }
             //vpToken?.let { put("vp_token", listOf(it.toString())) }
-            vpToken?.let { put("vp_token", listOf(it.jsonPrimitive.content)) }
+            vpToken?.let {
+                when (it) {
+                    is JsonPrimitive -> put("vp_token", listOf(it.jsonPrimitive.content))
+                    is JsonArray -> put("vp_token", it.jsonArray.map { it.jsonPrimitive.content })
+                    else -> throw IllegalArgumentException("vpToken is of unsupported JSON type: $it")
+                }
+            }
             scope?.let { put("scope", listOf(it)) }
             cNonce?.let { put("c_nonce", listOf(it)) }
             cNonceExpiresIn?.let { put("c_nonce_expires_in", listOf(it.toString())) }
