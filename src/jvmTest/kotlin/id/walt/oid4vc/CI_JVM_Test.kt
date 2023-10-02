@@ -780,7 +780,7 @@ class CI_JVM_Test : AnnotationSpec() {
         println(credentialResp.credential!!.let { VerifiableCredential.fromString(it.jsonPrimitive.content) }.toJson())
     }
 
-    val mattrCredentialOffer = "openid-credential-offer://?credential_offer=%7B%22credential_issuer%22%3A%22https%3A%2F%2Flaunchpad.vii.electron.mattrlabs.io%22%2C%22credentials%22%3A%5B%7B%22format%22%3A%22jwt_vc_json%22%2C%22types%22%3A%5B%22OpenBadgeCredential%22%5D%7D%5D%2C%22grants%22%3A%7B%22urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Apre-authorized_code%22%3A%7B%22pre-authorized_code%22%3A%22RH5SHeQcKaAnYBPFRWGtm_Zx4vQ0wG-_8GqCjk17bc-%22%7D%7D%7D"
+    val mattrCredentialOffer = "openid-credential-offer://?credential_offer=%7B%22credential_issuer%22%3A%22https%3A%2F%2Flaunchpad.vii.electron.mattrlabs.io%22%2C%22credentials%22%3A%5B%7B%22format%22%3A%22jwt_vc_json%22%2C%22types%22%3A%5B%22OpenBadgeCredential%22%5D%7D%5D%2C%22grants%22%3A%7B%22urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Apre-authorized_code%22%3A%7B%22pre-authorized_code%22%3A%22VphetImmqY-iPICjhRzGPk-QV7-TeT0wVD-sTh9rZ9k%22%7D%7D%7D"
 
     //@Test
     suspend fun testMattrCredentialOffer() {
@@ -816,7 +816,58 @@ class CI_JVM_Test : AnnotationSpec() {
         // make credential request
         val credReq = CredentialRequest.forOfferedCredential(
             offeredCredentials.first(),
-            credentialWallet.generateDidProof(credentialWallet.TEST_DID, ciTestProvider.baseUrl, tokenResp.cNonce)
+            credentialWallet.generateDidProof(credentialWallet.TEST_DID, credOfferReq.credentialOfferUri
+                ?: credOfferReq.credentialOffer!!.credentialIssuer, tokenResp.cNonce)
+        )
+        println("credReq: $credReq")
+
+        val credentialResp = ktorClient.post(providerMetadata.credentialEndpoint!!) {
+            contentType(ContentType.Application.Json)
+            bearerAuth(tokenResp.accessToken!!)
+            setBody(credReq.toJSON())
+        }.body<JsonObject>().let { CredentialResponse.fromJSON(it) }
+        println("credentialResp: $credentialResp")
+
+        credentialResp.isSuccess shouldBe true
+        credentialResp.credential shouldNotBe null
+        println(credentialResp.credential!!.let { VerifiableCredential.fromString(it.jsonPrimitive.content) }.toJson())
+    }
+
+    val spheronCredOffer = "openid-credential-offer://?credential_offer=%7B%22grants%22%3A%7B%22urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Apre-authorized_code%22%3A%7B%22pre-authorized_code%22%3A%221P8XydcKW1Gy5y7e1u25mM%22%2C%22user_pin_required%22%3Afalse%7D%7D%2C%22credentials%22%3A%5B%22OpenBadgeCredential%22%5D%2C%22credential_issuer%22%3A%22https%3A%2F%2Fssi.sphereon.com%2Fpf3%22%7D"
+
+    @Test
+    suspend fun parseSpheronCredOffer() {
+        val credOfferReq = CredentialOfferRequest.fromHttpQueryString(Url(spheronCredOffer).encodedQuery)
+        credOfferReq.credentialOffer shouldNotBe null
+        val providerMetadataUri = credentialWallet.getCIProviderMetadataUrl(credOfferReq.credentialOffer!!.credentialIssuer)
+        val providerMetadata = ktorClient.get(providerMetadataUri).call.body<JsonObject>().let { OpenIDProviderMetadata.fromJSON(it) }
+        println("providerMetadata: $providerMetadata")
+        providerMetadata.tokenEndpoint shouldNotBe null
+        providerMetadata.credentialEndpoint shouldNotBe null
+        println("// resolve offered credentials")
+        val offeredCredentials = credOfferReq.credentialOffer!!.resolveOfferedCredentials(providerMetadata)
+        println("offeredCredentials: $offeredCredentials")
+
+        // make token request
+        var tokenReq = TokenRequest(
+            grantType = GrantType.pre_authorized_code,
+            clientId = testCIClientConfig.clientID,
+            redirectUri = credentialWallet.config.redirectUri,
+            preAuthorizedCode = credOfferReq.credentialOffer!!.grants[GrantType.pre_authorized_code.value]!!.preAuthorizedCode,
+            userPin = null
+        )
+        println("tokenReq: ${tokenReq.toHttpQueryString()}")
+        var tokenResp = ktorClient.submitForm(
+            providerMetadata.tokenEndpoint!!, formParameters = parametersOf(tokenReq.toHttpParameters())
+        ).body<JsonObject>().let { TokenResponse.fromJSON(it) }
+        println("tokenResp: $tokenResp")
+        tokenResp.accessToken shouldNotBe null
+
+        // make credential request
+        val credReq = CredentialRequest.forOfferedCredential(
+            offeredCredentials.first(),
+            credentialWallet.generateDidProof(credentialWallet.TEST_DID, credOfferReq.credentialOfferUri
+                ?: credOfferReq.credentialOffer!!.credentialIssuer, tokenResp.cNonce)
         )
         println("credReq: $credReq")
 

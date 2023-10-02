@@ -59,7 +59,7 @@ abstract class SIOPCredentialProvider(
 
   open fun getCIProviderMetadataUrl(baseUrl: String): String {
     return URLBuilder(baseUrl).apply {
-      pathSegments = listOf(".well-known", "openid-credential-issuer")
+      pathSegments = this.pathSegments.plus(listOf(".well-known", "openid-credential-issuer"))
     }.buildString()
   }
 
