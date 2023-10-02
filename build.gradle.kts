@@ -102,6 +102,7 @@ kotlin {
 
                 implementation("id.walt.servicematrix:WaltID-ServiceMatrix:1.1.3")
                 implementation("id.walt:waltid-ssikit:1.2308021811.0")
+                implementation("id.walt:core-crypto:1.0.2-SNAPSHOT")
 
                 implementation("io.ktor:ktor-server-core-jvm:$ktor_version")
                 implementation("io.ktor:ktor-server-netty-jvm:$ktor_version")
@@ -112,6 +113,7 @@ kotlin {
                 implementation("io.ktor:ktor-client-cio:$ktor_version")
                 implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
                 implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
+                implementation("io.ktor:ktor-client-logging-jvm:$ktor_version")
 
             }
         }

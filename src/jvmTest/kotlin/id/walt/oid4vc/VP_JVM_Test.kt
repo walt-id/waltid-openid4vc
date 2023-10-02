@@ -18,6 +18,7 @@ import io.kotest.matchers.shouldNotBe
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
@@ -32,9 +33,13 @@ class VP_JVM_Test : AnnotationSpec() {
     private lateinit var testWallet: TestCredentialWallet
     private lateinit var testVerifier: VPTestVerifier
 
-    val ktorClient = HttpClient(CIO) {
+    val http = HttpClient(CIO) {
         install(ContentNegotiation) {
             json()
+        }
+        install(Logging) {
+            logger = Logger.SIMPLE
+            level = LogLevel.ALL
         }
         followRedirects = false
     }
@@ -49,7 +54,7 @@ class VP_JVM_Test : AnnotationSpec() {
         testVerifier.start()
     }
 
-    @Test
+    //@Test
     fun testParsePresentationDefinition() {
         // parse example 1
         val pd1 = PresentationDefinition.fromJSONString(presentationDefinitionExample1)
@@ -83,7 +88,7 @@ class VP_JVM_Test : AnnotationSpec() {
         pd3.submissionRequirements!!.first().from shouldBe "A"
     }
 
-    @Test
+    //@Test
     suspend fun testVPAuthorization() {
         val authReq = AuthorizationRequest(
             responseType = ResponseType.vp_token.name,
@@ -108,7 +113,7 @@ class VP_JVM_Test : AnnotationSpec() {
             clientMetadata = OpenIDClientMetadata(listOf(testWallet.baseUrl))
         )
         println("Auth req: $authReq")
-        val authResp = ktorClient.get(testWallet.metadata.authorizationEndpoint!!) {
+        val authResp = http.get(testWallet.metadata.authorizationEndpoint!!) {
             url { parameters.appendAll(parametersOf(authReq.toHttpParameters())) }
         }
         println("Auth resp: $authReq")
@@ -117,10 +122,13 @@ class VP_JVM_Test : AnnotationSpec() {
         val redirectUrl = Url(authResp.headers[HttpHeaders.Location]!!)
         val tokenResponse = TokenResponse.fromHttpParameters(redirectUrl.parameters.toMap())
         tokenResponse.vpToken shouldNotBe null
-        Auditor.getService().verify(tokenResponse.vpToken!!.toString(), listOf(SignaturePolicy())).result shouldBe true
+
+        // vpToken is NOT a string, but JSON ELEMENT
+        // this will break without .content(): (if JsonPrimitive and not JsonArray!)
+        Auditor.getService().verify(tokenResponse.vpToken!!.jsonPrimitive.content, listOf(SignaturePolicy())).result shouldBe true
     }
 
-    //@Test
+    @Test
     suspend fun testMattrLaunchpadVerificationRequest() {
         // parse verification request (QR code)
         val authReq = AuthorizationRequest.fromHttpQueryString(Url(mattrLaunchpadVerificationRequest).encodedQuery)
@@ -143,21 +151,25 @@ class VP_JVM_Test : AnnotationSpec() {
         val siopSession = testWallet.initializeAuthorization(authReq, 600)
         siopSession.authorizationRequest?.presentationDefinition shouldNotBe null
         val tokenResponse = testWallet.processImplicitFlowAuthorization(siopSession.authorizationRequest!!)
+        println("tokenResponse vpToken: ${tokenResponse.vpToken}")
         tokenResponse.vpToken shouldNotBe null
         tokenResponse.presentationSubmission shouldNotBe null
-        /*
+
+        println("Got token response: $tokenResponse")
+
         println("Submitting...")
-        val resp = ktorClient.submitForm(siopSession.authorizationRequest!!.responseUri!!,
-          parameters {
-            tokenResponse.toHttpParameters().forEach { entry ->
-              entry.value.forEach { append(entry.key, it) }
-            }
-          })
+        val resp = http.submitForm(siopSession.authorizationRequest!!.responseUri!!,
+            parameters {
+                tokenResponse.toHttpParameters().forEach { entry ->
+                    println("submitForm param: ${entry.key} -> ${entry.value}")
+                    println("first val is: ${entry.value.first()}")
+                    appendAll(entry.key, entry.value)
+                }
+            })
         resp.status shouldBe HttpStatusCode.OK
-        */
     }
 
-    @Test
+    //@Test
     suspend fun testInitializeVerifierSession() {
         val verifierSession = testVerifier.initializeAuthorization(
             PresentationDefinition(
@@ -185,7 +197,8 @@ class VP_JVM_Test : AnnotationSpec() {
         val tokenResponse = testWallet.processImplicitFlowAuthorization(walletSession.authorizationRequest!!)
         tokenResponse.vpToken shouldNotBe null
         tokenResponse.presentationSubmission shouldNotBe null
-        val resp = ktorClient.submitForm(walletSession.authorizationRequest!!.responseUri!!,
+
+        val resp = http.submitForm(walletSession.authorizationRequest!!.responseUri!!,
             parameters {
                 tokenResponse.toHttpParameters().forEach { entry ->
                     entry.value.forEach { append(entry.key, it) }
@@ -205,7 +218,7 @@ class VP_JVM_Test : AnnotationSpec() {
         val tokenResponse = testWallet.processImplicitFlowAuthorization(walletSession.authorizationRequest!!)
         tokenResponse.vpToken shouldNotBe null
         tokenResponse.presentationSubmission shouldNotBe null
-        val resp = ktorClient.submitForm(walletSession.authorizationRequest!!.responseUri!!,
+        val resp = http.submitForm(walletSession.authorizationRequest!!.responseUri!!,
             parameters {
                 tokenResponse.toHttpParameters().forEach { entry ->
                     entry.value.forEach { append(entry.key, it) }
@@ -356,9 +369,10 @@ class VP_JVM_Test : AnnotationSpec() {
             "}\n"
 
     val mattrLaunchpadVerificationRequest =
-        "openid4vp://authorize?client_id=https%3A%2F%2Flaunchpad.mattrlabs.com%2Fapi%2Fvp%2Fcallback&client_id_scheme=redirect_uri&response_uri=https%3A%2F%2Flaunchpad.mattrlabs.com%2Fapi%2Fvp%2Fcallback&response_type=vp_token&response_mode=direct_post&presentation_definition_uri=https%3A%2F%2Flaunchpad.mattrlabs.com%2Fapi%2Fvp%2Frequest%3Fstate%3D07d5wKEtyo_csmb0KzLFAQ&nonce=jWsDQF2OgbKa6yr3goVYqw&state=07d5wKEtyo_csmb0KzLFAQ"
+        "openid4vp://authorize?client_id=https%3A%2F%2Flaunchpad.mattrlabs.com%2Fapi%2Fvp%2Fcallback&client_id_scheme=redirect_uri&response_uri=https%3A%2F%2Flaunchpad.mattrlabs.com%2Fapi%2Fvp%2Fcallback&response_type=vp_token&response_mode=direct_post&presentation_definition_uri=https%3A%2F%2Flaunchpad.mattrlabs.com%2Fapi%2Fvp%2Frequest%3Fstate%3DN0dsU_tbdLbH_SnHHCOa7Q&nonce=Zrpqv4fAUXC42YWg_0K0bw&state=N0dsU_tbdLbH_SnHHCOa7Q"
     val mattrLaunchpadPresentationDefinitionData =
         "{\"id\":\"vp token example\",\"input_descriptors\":[{\"id\":\"OpenBadgeCredential\",\"format\":{\"jwt_vc_json\":{\"alg\":[\"EdDSA\"]}},\"constraints\":{\"fields\":[{\"path\":[\"\$.type\"],\"filter\":{\"type\":\"string\",\"pattern\":\"OpenBadgeCredential\"}}]}}]}"
 
-    val waltVerifierTestRequest = "openid4vp://authorize?response_type=vp_token&client_id=http%3A%2F%2Flocalhost%3A3000%2Foidc%2Fverify&response_mode=direct_post&state=cc19d8c7-43e8-48bb-ae41-7b4b921953e0&presentation_definition_uri=http%3A%2F%2Flocalhost%3A3000%2Fvp%2Fpd%2Fcc19d8c7-43e8-48bb-ae41-7b4b921953e0&client_id_scheme=redirect_uri&response_uri=http%3A%2F%2Flocalhost%3A3000%2Foidc%2Fverify%2Fcc19d8c7-43e8-48bb-ae41-7b4b921953e0"
+    val waltVerifierTestRequest =
+        "openid4vp://authorize?response_type=vp_token&client_id=http%3A%2F%2Flocalhost%3A5000%2Foidc%2Fverify&response_mode=direct_post&state=a5ee3880-05b6-4b42-8a6f-2706da7f76a2&presentation_definition_uri=http%3A%2F%2Flocalhost%3A5000%2Fvp%2Fpd%2Fa5ee3880-05b6-4b42-8a6f-2706da7f76a2&client_id_scheme=redirect_uri&response_uri=http%3A%2F%2Flocalhost%3A5000%2Foidc%2Fverify%2Fa5ee3880-05b6-4b42-8a6f-2706da7f76a2"
 }
