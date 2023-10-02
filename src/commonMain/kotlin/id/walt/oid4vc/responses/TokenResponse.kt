@@ -25,6 +25,7 @@ data class TokenResponse private constructor(
     val interval: Long? = null,
     @Serializable(PresentationSubmissionSerializer::class)
     @SerialName("presentation_submission") val presentationSubmission: PresentationSubmission? = null,
+    val state: String? = null,
     val error: String? = null,
     @SerialName("error_description") val errorDescription: String? = null,
     @SerialName("error_uri") val errorUri: String? = null,
@@ -38,11 +39,11 @@ data class TokenResponse private constructor(
         fun success(
             accessToken: String, tokenType: String, expiresIn: Long? = null, refreshToken: String? = null,
             scope: String? = null, cNonce: String? = null, cNonceExpiresIn: Long? = null,
-            authorizationPending: Boolean? = null, interval: Long? = null
-        ) = TokenResponse(accessToken, tokenType, expiresIn, refreshToken, scope = scope)
+            authorizationPending: Boolean? = null, interval: Long? = null, state: String?
+        ) = TokenResponse(accessToken, tokenType, expiresIn, refreshToken, scope = scope, state = state)
 
-        fun success(vpToken: JsonElement, presentationSubmission: PresentationSubmission) =
-            TokenResponse(vpToken = vpToken, presentationSubmission = presentationSubmission)
+        fun success(vpToken: JsonElement, presentationSubmission: PresentationSubmission, state: String?) =
+            TokenResponse(vpToken = vpToken, presentationSubmission = presentationSubmission, state = state)
 
         fun error(error: TokenErrorCode, errorDescription: String? = null, errorUri: String? = null) =
             TokenResponse(error = error.name, errorDescription = errorDescription, errorUri = errorUri)
@@ -59,6 +60,7 @@ data class TokenResponse private constructor(
             "authorization_pending",
             "interval",
             "presentation_submission",
+            "state",
             "error",
             "error_description",
             "error_uri"
@@ -77,6 +79,7 @@ data class TokenResponse private constructor(
                 parameters["authorization_pending"]?.firstOrNull()?.toBoolean(),
                 parameters["interval"]?.firstOrNull()?.toLong(),
                 parameters["presentation_submission"]?.firstOrNull()?.let { PresentationSubmission.fromJSONString(it) },
+                parameters["state"]?.firstOrNull(),
                 parameters["error"]?.firstOrNull(),
                 parameters["error_description"]?.firstOrNull(),
                 parameters["error_uri"]?.firstOrNull(),
@@ -106,6 +109,7 @@ data class TokenResponse private constructor(
             authorizationPending?.let { put("authorization_pending", listOf(it.toString())) }
             interval?.let { put("interval", listOf(it.toString())) }
             presentationSubmission?.let { put("presentation_submission", listOf(it.toJSONString())) }
+            state?.let { put("state", listOf(it)) }
             error?.let { put("error", listOf(it)) }
             errorDescription?.let { put("error_description", listOf(it)) }
             errorUri?.let { put("error_uri", listOf(it)) }

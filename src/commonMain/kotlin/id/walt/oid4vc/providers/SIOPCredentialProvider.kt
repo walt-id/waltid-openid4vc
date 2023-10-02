@@ -140,11 +140,11 @@ abstract class SIOPCredentialProvider(
             tokenRequest,
             TokenErrorCode.invalid_request
         )
-        val result = generatePresentation(presentationDefinition)
+        val result = generatePresentation(presentationDefinition, session.authorizationRequest.nonce)
         return if (result.presentations.size == 1) {
-            TokenResponse.success(result.presentations.first(), result.presentationSubmission)
+            TokenResponse.success(result.presentations.first(), result.presentationSubmission, session.authorizationRequest?.state)
         } else {
-            TokenResponse.success(JsonArray(result.presentations), result.presentationSubmission)
+            TokenResponse.success(JsonArray(result.presentations), result.presentationSubmission, session.authorizationRequest?.state)
         }
     }
 }

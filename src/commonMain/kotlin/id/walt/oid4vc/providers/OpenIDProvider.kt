@@ -105,7 +105,7 @@ abstract class OpenIDProvider<S : AuthorizationSession>(
     protected open fun generateTokenResponse(session: S, tokenRequest: TokenRequest): TokenResponse {
         return TokenResponse.success(
             generateToken(session.id, TokenTarget.ACCESS),
-            "bearer"
+            "bearer", state = session.authorizationRequest?.state
         )
     }
 

@@ -59,11 +59,15 @@ class TestCredentialWallet(
     override fun verifyTokenSignature(target: TokenTarget, token: String) =
         JwtService.getService().verify(token).verified
 
-    override fun generatePresentation(presentationDefinition: PresentationDefinition): PresentationResult {
+    override fun generatePresentation(presentationDefinition: PresentationDefinition, nonce: String?): PresentationResult {
         // find credential(s) matching the presentation definition
         // for this test wallet implementation, present all credentials in the wallet
         val presentationJwtStr = Custodian.getService()
-            .createPresentation(Custodian.getService().listCredentials().map { PresentableCredential(it) }, TEST_DID)
+            .createPresentation(Custodian.getService().listCredentials().map { PresentableCredential(
+                it,
+                selectiveDisclosure = null,
+                discloseAll = false
+            ) }, TEST_DID, challenge = nonce)
 
         println("================")
         println("PRESENTATION IS: $presentationJwtStr")
@@ -91,10 +95,10 @@ class TestCredentialWallet(
                     DescriptorMapping(
                         id = type,
                         format = VCFormat.jwt_vp_json,  // jwt_vp_json
-                        path = "$[$index]",
+                        path = "$[0]",
                         pathNested = DescriptorMapping(
                             format = VCFormat.jwt_vc_json,
-                            path = "$[$index].vp.verifiableCredential[0]",
+                            path = "$[0].vp.verifiableCredential[0]",
                         )
                     )
                 }
