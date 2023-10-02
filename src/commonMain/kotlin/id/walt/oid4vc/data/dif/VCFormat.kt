@@ -18,7 +18,8 @@ enum class VCFormat {
     ldp_vc,
     ldp_vp,
     ldp,
-    jwt_vc_json
+    jwt_vc_json,
+    jwt_vp_json
 }
 
 @Serializable
