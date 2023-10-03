@@ -359,7 +359,7 @@ class VP_JVM_Test : AnnotationSpec() {
                 println("$k -> $v")
             }
         }
-        
+
         val authReq = if (urlParams.contains("request_uri")) {
             val requestUri = urlParams["request_uri"]!!
             println("Got request_uri, resolving: $requestUri")
@@ -399,7 +399,7 @@ class VP_JVM_Test : AnnotationSpec() {
             )
         } else AuthorizationRequest.fromHttpQueryString(Url(sphereonAuthReqUrl).encodedQuery)
 
-        
+
         println("Auth req: $authReq")
         authReq.responseMode shouldBe ResponseMode.direct_post
         //authReq.responseType shouldBe ResponseType.vp_token.name
