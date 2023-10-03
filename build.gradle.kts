@@ -103,7 +103,7 @@ kotlin {
                 implementation("io.kotest:kotest-assertions-json:5.5.5")
 
                 implementation("id.walt.servicematrix:WaltID-ServiceMatrix:1.1.3")
-                implementation("id.walt:waltid-ssikit:1.SNAPSHOT-JWTPRESENT")
+                implementation("id.walt:waltid-ssikit:1.JWTPRESENT")
                 implementation("id.walt:core-crypto:1.0.2-SNAPSHOT")
 
                 implementation("io.ktor:ktor-server-core-jvm:$ktor_version")
