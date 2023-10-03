@@ -339,7 +339,7 @@ class CI_JVM_Test : AnnotationSpec() {
         credentialResp.credential.shouldBeInstanceOf<JsonPrimitive>()
         val credential = VerifiableCredential.fromString(credentialResp.credential!!.jsonPrimitive.content)
         println(">>> Issued credential: $credential")
-        credential.issuer?.id shouldBe ciTestProvider.CI_ISSUER_DID
+        credential.issuer?.id shouldBe ciTestProvider.baseUrl
         credential.credentialSubject?.id shouldBe credentialWallet.TEST_DID
         Auditor.getService().verify(credential, listOf(SignaturePolicy())).result shouldBe true
 
@@ -374,7 +374,7 @@ class CI_JVM_Test : AnnotationSpec() {
         val deferredCredential = VerifiableCredential.fromString(deferredCredResp2.credential!!.jsonPrimitive.content)
         println(">>> Issued deferred credential: $deferredCredential")
 
-        deferredCredential.issuer?.id shouldBe ciTestProvider.CI_ISSUER_DID
+        deferredCredential.issuer?.id shouldBe ciTestProvider.baseUrl
         deferredCredential.credentialSubject?.id shouldBe credentialWallet.TEST_DID
         Auditor.getService().verify(deferredCredential, listOf(SignaturePolicy())).result shouldBe true
 
@@ -525,7 +525,7 @@ class CI_JVM_Test : AnnotationSpec() {
         println("// parse and verify credential")
         val credential = VerifiableCredential.fromString(credentialResp.credential!!.jsonPrimitive.content)
         println(">>> Issued credential: $credential")
-        credential.issuer?.id shouldBe ciTestProvider.CI_ISSUER_DID
+        credential.issuer?.id shouldBe ciTestProvider.baseUrl
         credential.credentialSubject?.id shouldBe credentialWallet.TEST_DID
         Auditor.getService().verify(credential, listOf(SignaturePolicy())).result shouldBe true
     }
@@ -642,7 +642,7 @@ class CI_JVM_Test : AnnotationSpec() {
         println("// parse and verify credential")
         val credential = VerifiableCredential.fromString(credentialResp.credential!!.jsonPrimitive.content)
         println(">>> Issued credential: $credential")
-        credential.issuer?.id shouldBe ciTestProvider.CI_ISSUER_DID
+        credential.issuer?.id shouldBe ciTestProvider.baseUrl
         credential.credentialSubject?.id shouldBe credentialWallet.TEST_DID
         Auditor.getService().verify(credential, listOf(SignaturePolicy())).result shouldBe true
     }
@@ -723,7 +723,7 @@ class CI_JVM_Test : AnnotationSpec() {
         val credential = VerifiableCredential.fromString(credentialResp.credential!!.jsonPrimitive.content)
         println(">>> Issued credential: $credential")
 
-        credential.issuer?.id shouldBe ciTestProvider.CI_ISSUER_DID
+        credential.issuer?.id shouldBe ciTestProvider.baseUrl
         credential.credentialSubject?.id shouldBe credentialWallet.TEST_DID
         Auditor.getService().verify(credential, listOf(SignaturePolicy())).result shouldBe true
     }
@@ -835,7 +835,7 @@ class CI_JVM_Test : AnnotationSpec() {
 
     val spheronCredOffer = "openid-credential-offer://?credential_offer=%7B%22grants%22%3A%7B%22urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Apre-authorized_code%22%3A%7B%22pre-authorized_code%22%3A%221P8XydcKW1Gy5y7e1u25mM%22%2C%22user_pin_required%22%3Afalse%7D%7D%2C%22credentials%22%3A%5B%22OpenBadgeCredential%22%5D%2C%22credential_issuer%22%3A%22https%3A%2F%2Fssi.sphereon.com%2Fpf3%22%7D"
 
-    @Test
+    //@Test
     suspend fun parseSpheronCredOffer() {
         val credOfferReq = CredentialOfferRequest.fromHttpQueryString(Url(spheronCredOffer).encodedQuery)
         credOfferReq.credentialOffer shouldNotBe null

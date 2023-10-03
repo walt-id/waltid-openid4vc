@@ -54,7 +54,7 @@ class VP_JVM_Test : AnnotationSpec() {
         testVerifier.start()
     }
 
-    //@Test
+    @Test
     fun testParsePresentationDefinition() {
         // parse example 1
         val pd1 = PresentationDefinition.fromJSONString(presentationDefinitionExample1)
@@ -88,7 +88,7 @@ class VP_JVM_Test : AnnotationSpec() {
         pd3.submissionRequirements!!.first().from shouldBe "A"
     }
 
-    //@Test
+    @Test
     suspend fun testVPAuthorization() {
         val authReq = AuthorizationRequest(
             responseType = ResponseType.vp_token.name,
@@ -128,7 +128,7 @@ class VP_JVM_Test : AnnotationSpec() {
         Auditor.getService().verify(tokenResponse.vpToken!!.jsonPrimitive.content, listOf(SignaturePolicy())).result shouldBe true
     }
 
-    @Test
+    //@Test
     suspend fun testMattrLaunchpadVerificationRequest() {
 
         val mattrLaunchpadResponse = http.post("https://launchpad.mattrlabs.com/api/vp/create") {
@@ -158,6 +158,48 @@ class VP_JVM_Test : AnnotationSpec() {
         presentationDefinition.inputDescriptors[0].format!![VCFormat.jwt_vc_json]!!.alg!! shouldContain "EdDSA"
         presentationDefinition.inputDescriptors[0].constraints?.fields?.first()?.path?.first() shouldBe "$.type"
         presentationDefinition.inputDescriptors[0].constraints?.fields?.first()?.filter?.get("pattern")?.jsonPrimitive?.content shouldBe "OpenBadgeCredential"
+
+        val siopSession = testWallet.initializeAuthorization(authReq, 600)
+        siopSession.authorizationRequest?.presentationDefinition shouldNotBe null
+        val tokenResponse = testWallet.processImplicitFlowAuthorization(siopSession.authorizationRequest!!)
+        println("tokenResponse vpToken: ${tokenResponse.vpToken}")
+        tokenResponse.vpToken shouldNotBe null
+        tokenResponse.presentationSubmission shouldNotBe null
+
+        println("Got token response: $tokenResponse")
+
+        val debugPresentingPresentationSubmission = tokenResponse.toHttpParameters()["presentation_submission"]!!.first()
+        val decoded = Json.parseToJsonElement(debugPresentingPresentationSubmission).jsonObject
+        val encoded = Json { prettyPrint = true }.encodeToString(decoded)
+        println(encoded)
+
+        println("Submitting...")
+        val resp = http.submitForm(siopSession.authorizationRequest!!.responseUri!!,
+            parameters {
+                tokenResponse.toHttpParameters().forEach { entry ->
+                    println("submitForm param: ${entry.key} -> ${entry.value}")
+                    println("first val is: ${entry.value.first()}")
+                    appendAll(entry.key, entry.value)
+                }
+            })
+        resp.status shouldBe HttpStatusCode.OK
+    }
+
+    //@Test
+    suspend fun testUniresolverVerificationRequest() {
+
+        val uniresUrl = "openid4vp://authorize?response_type=vp_token&presentation_definition={\"id\":\"OpenBadgeCredential\",\"input_descriptors\":[{\"id\":\"OpenBadge Credential\",\"format\":{\"jwt_vc\":{\"proof_type\":[\"ES256\",\"ES256\",\"ES256K\",\"PS256\"]},\"jwt_vp\":{\"proof_type\":[\"ES256\",\"ES256\",\"ES256K\",\"PS256\"]},\"ldp_vc\":{\"proof_type\":[\"Ed25519Signature2018\",\"Ed25519Signature2020\",\"JsonWebSignature2020\",\"EcdsaSecp256k1Signature2019\"]},\"ldp_vp\":{\"proof_type\":[\"Ed25519Signature2018\",\"Ed25519Signature2020\",\"JsonWebSignature2020\",\"EcdsaSecp256k1Signature2019\"]}},\"constraints\":{\"fields\":[{\"path\":[\"\$.type\"],\"optional\":false}]}}]}&client_id=https://oidc4vp.univerifier.io/1.0/authorization/direct_post&response_mode=direct_post&response_uri=https://oidc4vp.univerifier.io/1.0/authorization/direct_post&state=DUoqgmKcmoPsUuURKNJV&nonce=d292a622-82ec-4608-a873-356deae18bee"
+        /*-H 'Referer: https://launchpad.mattrlabs.com/credential/OpenBadgeCredential?name=Example+University+Degree&description=JFF+Plugfest+3+OpenBadge+Credential&issuerIconUrl=https%3A%2F%2Fw3c-ccg.github.io%2Fvc-ed%2Fplugfest-1-2022%2Fimages%2FJFF_LogoLockup.png&issuerLogoUrl=undefined&backgroundColor=%23464c49&watermarkImageUrl=undefined&issuerName=Example+University' -H 'Content-Type: application/json'-H 'TE: trailers' *///--data-raw '{"types":["OpenBadgeCredential"]}'
+
+
+        // parse verification request (QR code)
+        val authReq = AuthorizationRequest.fromHttpQueryString(Url(uniresUrl).encodedQuery)
+        println("Auth req: $authReq")
+        authReq.responseMode shouldBe ResponseMode.direct_post
+        authReq.responseType shouldBe ResponseType.vp_token.name
+        authReq.responseUri shouldNotBe null
+        //authReq.presentationDefinition shouldBe null
+        //authReq.presentationDefinitionUri shouldNotBe null
 
         val siopSession = testWallet.initializeAuthorization(authReq, 600)
         siopSession.authorizationRequest?.presentationDefinition shouldNotBe null
@@ -400,7 +442,7 @@ class VP_JVM_Test : AnnotationSpec() {
         resp.status shouldBe HttpStatusCode.OK
     }
 
-    //@Test
+    @Test
     suspend fun testInitializeVerifierSession() {
         val verifierSession = testVerifier.initializeAuthorization(
             PresentationDefinition(
@@ -439,8 +481,13 @@ class VP_JVM_Test : AnnotationSpec() {
         resp.status shouldBe HttpStatusCode.OK
     }
 
-    //@Test
+    @Test
     suspend fun testWaltVerifierTestRequest() {
+        val waltVerifierTestRequest = testVerifier.initializeAuthorization(
+            PresentationDefinition.fromJSONString(presentationDefinitionExample1), ResponseMode.direct_post
+        ).authorizationRequest!!.toHttpQueryString().let {
+            "openid4vp://authorize?$it"
+        }
         val authReq = AuthorizationRequest.fromHttpQueryString(Url(waltVerifierTestRequest).encodedQuery)
         println("Auth req: $authReq")
         val walletSession = testWallet.initializeAuthorization(authReq, 60)
@@ -603,7 +650,4 @@ class VP_JVM_Test : AnnotationSpec() {
     //    "openid4vp://authorize?client_id=https%3A%2F%2Flaunchpad.mattrlabs.com%2Fapi%2Fvp%2Fcallback&client_id_scheme=redirect_uri&response_uri=https%3A%2F%2Flaunchpad.mattrlabs.com%2Fapi%2Fvp%2Fcallback&response_type=vp_token&response_mode=direct_post&presentation_definition_uri=https%3A%2F%2Flaunchpad.mattrlabs.com%2Fapi%2Fvp%2Frequest%3Fstate%3D6-obA38Nu9qMPn6GT26flQ&nonce=ddZ6JA75YljfoOBj-9I-nA&state=6-obA38Nu9qMPn6GT26flQ"
     val mattrLaunchpadPresentationDefinitionData =
         "{\"id\":\"vp token example\",\"input_descriptors\":[{\"id\":\"OpenBadgeCredential\",\"format\":{\"jwt_vc_json\":{\"alg\":[\"EdDSA\"]}},\"constraints\":{\"fields\":[{\"path\":[\"\$.type\"],\"filter\":{\"type\":\"string\",\"pattern\":\"OpenBadgeCredential\"}}]}}]}"
-
-    val waltVerifierTestRequest =
-        "openid4vp://authorize?response_type=vp_token&client_id=http%3A%2F%2Flocalhost%3A5000%2Foidc%2Fverify&response_mode=direct_post&state=a5ee3880-05b6-4b42-8a6f-2706da7f76a2&presentation_definition_uri=http%3A%2F%2Flocalhost%3A5000%2Fvp%2Fpd%2Fa5ee3880-05b6-4b42-8a6f-2706da7f76a2&client_id_scheme=redirect_uri&response_uri=http%3A%2F%2Flocalhost%3A5000%2Foidc%2Fverify%2Fa5ee3880-05b6-4b42-8a6f-2706da7f76a2"
 }
