@@ -62,8 +62,9 @@ class TestCredentialWallet(
     override fun generatePresentation(presentationDefinition: PresentationDefinition, nonce: String?): PresentationResult {
         // find credential(s) matching the presentation definition
         // for this test wallet implementation, present all credentials in the wallet
+        val filterString = presentationDefinition.inputDescriptors.flatMap { it.constraints?.fields ?: listOf() }.firstOrNull { field -> field.path.any { it.contains("type") } }?.filter?.jsonObject.toString()
         val presentationJwtStr = Custodian.getService()
-            .createPresentation(Custodian.getService().listCredentials().map { PresentableCredential(
+            .createPresentation(Custodian.getService().listCredentials().filter { filterString.contains(it.type.last()) }.map { PresentableCredential(
                 it,
                 selectiveDisclosure = null,
                 discloseAll = false
@@ -134,11 +135,11 @@ class TestCredentialWallet(
 
                     DescriptorMapping(
                         id = type,
-                        format = VCFormat.jwt_vp_json,  // jwt_vp_json
-                        path = "$[0]",
+                        format = VCFormat.jwt_vp,  // jwt_vp_json
+                        path = "$",
                         pathNested = DescriptorMapping(
-                            format = VCFormat.jwt_vc_json,
-                            path = "$[0].vp.verifiableCredential[0]",
+                            format = VCFormat.jwt_vc,
+                            path = "$.vp.verifiableCredential[0]",
                         )
                     )
                 }
@@ -146,7 +147,7 @@ class TestCredentialWallet(
         )
     }
 
-    val TEST_DID: String = DidService.create(DidMethod.jwk)
+    val TEST_DID: String = DidService.create(DidMethod.key)
 
     override fun resolveDID(did: String): String {
         val didObj = DidService.resolve(did)

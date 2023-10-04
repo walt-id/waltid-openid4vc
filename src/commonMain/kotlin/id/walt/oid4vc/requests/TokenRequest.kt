@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
 
 data class TokenRequest(
   val grantType: GrantType,
-  val clientId: String,
+  val clientId: String? = null,
   val redirectUri: String? = null,
   val code: String? = null,
   val preAuthorizedCode: String? = null,
@@ -18,7 +18,7 @@ data class TokenRequest(
   override fun toHttpParameters(): Map<String, List<String>> {
     return buildMap {
       put("grant_type", listOf(grantType.value))
-      put("client_id", listOf(clientId))
+      clientId?.let { put("client_id", listOf(it)) }
       redirectUri?.let { put("redirect_uri", listOf(it)) }
       code?.let { put("code", listOf(it)) }
       preAuthorizedCode?.let { put("pre-authorized_code", listOf(it)) }
@@ -32,7 +32,7 @@ data class TokenRequest(
     override fun fromHttpParameters(parameters: Map<String, List<String>>): TokenRequest {
       return TokenRequest(
         parameters["grant_type"]!!.first().let { GrantType.fromValue(it)!! },
-        parameters["client_id"]!!.first(),
+        parameters["client_id"]?.firstOrNull(),
         parameters["redirect_uri"]?.firstOrNull(),
         parameters["code"]?.firstOrNull(),
         parameters["pre-authorized_code"]?.firstOrNull(),

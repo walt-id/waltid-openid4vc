@@ -183,6 +183,13 @@ class VP_JVM_Test : AnnotationSpec() {
                 }
             })
         resp.status shouldBe HttpStatusCode.OK
+
+        val mattrLaunchpadResult = http.post("https://launchpad.mattrlabs.com/api/vp/poll-results") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"state":"${authReq.state}"}""")
+        }.body<JsonObject>()
+        mattrLaunchpadResult["vcVerification"]!!.jsonArray[0].jsonObject["verified"]!!.jsonPrimitive.boolean shouldBe true
+
     }
 
     //@Test

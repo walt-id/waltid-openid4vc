@@ -65,6 +65,8 @@ abstract class OpenIDCredentialVerifier(val config: CredentialVerifierConfig):
   }
 
   open fun verify(tokenResponse: TokenResponse, session: PresentationSession): PresentationSession {
+    // https://json-schema.org/specification
+    // https://github.com/OptimumCode/json-schema-validator
     return session.copy(
       tokenResponse = tokenResponse,
       verificationResult = doVerify(tokenResponse, session)
