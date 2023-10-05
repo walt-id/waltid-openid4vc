@@ -59,9 +59,9 @@ For the OpenID4VCI issuance protocol, implement the following endpoints:
 **Well-defined endpoints:**
 
 This endpoints are well-defined, and need to be available under this exact path, relative to your issuer base URL:
-* `/.well-known/openid-configuration`
+* `GET /.well-known/openid-configuration`
 
-* `/.well-known/openid-credential-issuer`
+* `GET /.well-known/openid-credential-issuer`
 
 Returns the issuer [provider metadata](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-issuer-metadata).
 
@@ -71,13 +71,43 @@ https://github.com/walt-id/waltid-openid4vc/blob/bd9374826d7acbd0d77d15cd2a81098
 
 These endpoints can have any path, according to your requirements or preferences, but need to be referenced in the provider metadata, returned by the well-defined configuration endpoints listed above.
 
-* `/par`
+* `POST /par`
 
-Endpoint to receive pushed authorization requests, referenced in the provider metadata as `pushed_authorization_request_endpoint`, see also [here](https://www.rfc-editor.org/rfc/rfc9126.html#name-authorization-server-metada).
+Endpoint to receive [pushed authorization requests](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-pushed-authorization-reques), referenced in the provider metadata as `pushed_authorization_request_endpoint`, see also [here](https://www.rfc-editor.org/rfc/rfc9126.html#name-authorization-server-metada).
 
 https://github.com/walt-id/waltid-openid4vc/blob/bd9374826d7acbd0d77d15cd2a81098e643eb6fa/src/jvmTest/kotlin/id/walt/oid4vc/CITestProvider.kt#L121-L129
 
+* `GET /authorize`
 
+[Authorization endpoint](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-authorization-request), referenced in provider metadata as `authorization_endpoint`, see [here](https://www.rfc-editor.org/rfc/rfc8414.html#section-2)
+
+Not required for the pre-authorized issuance flow.
+
+https://github.com/walt-id/waltid-openid4vc/blob/bd9374826d7acbd0d77d15cd2a81098e643eb6fa/src/jvmTest/kotlin/id/walt/oid4vc/CITestProvider.kt#L130-L158
+
+* `POST /token`
+
+[Token endpoint](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-token-endpoint), referenced in provider metadata as `token_endpoint`, see [here](https://www.rfc-editor.org/rfc/rfc8414.html#section-2)
+
+https://github.com/walt-id/waltid-openid4vc/blob/bd9374826d7acbd0d77d15cd2a81098e643eb6fa/src/jvmTest/kotlin/id/walt/oid4vc/CITestProvider.kt#L159-L168
+
+* `POST /credential`
+
+[Credential endpoint](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-endpoint) to fetch the issued credential, after authorization flow is completed. Referenced in provider metadata as `credential_endpoint`, as defined [here](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-issuer-metadata-p.
+
+https://github.com/walt-id/waltid-openid4vc/blob/bd9374826d7acbd0d77d15cd2a81098e643eb6fa/src/jvmTest/kotlin/id/walt/oid4vc/CITestProvider.kt#L169-L181
+
+* `POST /credential_deferred`
+
+[Deferred credential endpoint](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-deferred-credential-endpoin), to fetch issued credential if issuance is deferred.  Referenced in provider metadata as `deferred_credential_endpoint` (missing in spec).
+
+https://github.com/walt-id/waltid-openid4vc/blob/bd9374826d7acbd0d77d15cd2a81098e643eb6fa/src/jvmTest/kotlin/id/walt/oid4vc/CITestProvider.kt#L182-L193
+
+* `POST /batch_credential`
+
+[Batch credential endpoint](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-batch-credential-endpoint) to fetch multiple issued credentials. Referenced in provider metadata as `batch_credential_endpoint`, as defined [here](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-issuer-metadata-p.
+
+https://github.com/walt-id/waltid-openid4vc/blob/bd9374826d7acbd0d77d15cd2a81098e643eb6fa/src/jvmTest/kotlin/id/walt/oid4vc/CITestProvider.kt#L194-L205
 
 #### Business logic
 
