@@ -10,19 +10,20 @@ import kotlinx.serialization.json.jsonObject
 
 @Serializable
 data class ProofOfPossession(
-  @EncodeDefault @SerialName("proof_type") val proofType: ProofType = ProofType.jwt,
-  val jwt: String?,
-  override val customParameters: Map<String, JsonElement> = mapOf()
-): JsonDataObject() {
-  override fun toJSON() = Json.encodeToJsonElement(ProofOfPossessionSerializer, this).jsonObject
+    @EncodeDefault @SerialName("proof_type") val proofType: ProofType = ProofType.jwt,
+    val jwt: String?,
+    override val customParameters: Map<String, JsonElement> = mapOf()
+) : JsonDataObject() {
+    override fun toJSON() = Json.encodeToJsonElement(ProofOfPossessionSerializer, this).jsonObject
 
-  companion object: JsonDataObjectFactory<ProofOfPossession>() {
-    override fun fromJSON(jsonObject: JsonObject) = Json.decodeFromJsonElement(ProofOfPossessionSerializer, jsonObject)
-  }
+    companion object : JsonDataObjectFactory<ProofOfPossession>() {
+        override fun fromJSON(jsonObject: JsonObject) =
+            Json.decodeFromJsonElement(ProofOfPossessionSerializer, jsonObject)
+    }
 }
 
-object ProofOfPossessionSerializer: JsonDataObjectSerializer<ProofOfPossession>(ProofOfPossession.serializer())
+object ProofOfPossessionSerializer : JsonDataObjectSerializer<ProofOfPossession>(ProofOfPossession.serializer())
 
 enum class ProofType {
-  jwt
+    jwt
 }

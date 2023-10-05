@@ -5,8 +5,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 class CredentialVerifierConfig(
-  val clientId: String,
-  val clientIdScheme: ClientIdScheme? = ClientIdScheme.redirect_uri,
-  val redirectUri: String? = null,
-  val responseUrl: String? = null
-): OpenIDProviderConfig()
+    val clientId: String,
+    val clientIdScheme: ClientIdScheme? = ClientIdScheme.redirect_uri,
+    val redirectUri: String? = null,
+    val responseUrl: String? = null
+) : OpenIDProviderConfig()

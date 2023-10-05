@@ -15,15 +15,17 @@ import kotlinx.serialization.json.jsonObject
  */
 @Serializable
 data class LogoProperties(
-  val url: String? = null,
-  @SerialName("alt_text") val altText: String? = null,
-  override val customParameters: Map<String, JsonElement> = mapOf()
-): JsonDataObject() {
-  override fun toJSON(): JsonObject = Json.encodeToJsonElement(LogoPropertiesSerializer, this).jsonObject
-  companion object: JsonDataObjectFactory<LogoProperties>() {
-    override fun fromJSON(jsonObject: JsonObject): LogoProperties = Json.decodeFromJsonElement(LogoPropertiesSerializer, jsonObject)
-  }
+    val url: String? = null,
+    @SerialName("alt_text") val altText: String? = null,
+    override val customParameters: Map<String, JsonElement> = mapOf()
+) : JsonDataObject() {
+    override fun toJSON(): JsonObject = Json.encodeToJsonElement(LogoPropertiesSerializer, this).jsonObject
+
+    companion object : JsonDataObjectFactory<LogoProperties>() {
+        override fun fromJSON(jsonObject: JsonObject): LogoProperties =
+            Json.decodeFromJsonElement(LogoPropertiesSerializer, jsonObject)
+    }
 }
 
-object LogoPropertiesSerializer: JsonDataObjectSerializer<LogoProperties>(LogoProperties.serializer())
+object LogoPropertiesSerializer : JsonDataObjectSerializer<LogoProperties>(LogoProperties.serializer())
 

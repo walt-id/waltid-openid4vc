@@ -19,15 +19,17 @@ data class DescriptorMapping(
     val path: String,
     @SerialName("path_nested") val pathNested: DescriptorMapping? = null,
     override val customParameters: Map<String, JsonElement> = mapOf()
-):JsonDataObject() {
+) : JsonDataObject() {
 
     override fun toJSON(): JsonObject {
         TODO("Not yet implemented")
     }
-    companion object: JsonDataObjectFactory<DescriptorMapping>() {
+
+    companion object : JsonDataObjectFactory<DescriptorMapping>() {
         override fun fromJSON(jsonObject: JsonObject): DescriptorMapping {
             TODO("Not yet implemented")
         }
+
         fun vpPath(totalVps: Int, vpIdx: Int) = when (totalVps) {
             0 -> "$"
             1 -> "$"
@@ -36,11 +38,12 @@ data class DescriptorMapping(
     }
 }
 
-object DescriptorMappingSerializer: JsonDataObjectSerializer<DescriptorMapping>(DescriptorMapping.serializer())
+object DescriptorMappingSerializer : JsonDataObjectSerializer<DescriptorMapping>(DescriptorMapping.serializer())
 
-object DescriptorMappingListSerializer: KSerializer<List<DescriptorMapping>> {
+object DescriptorMappingListSerializer : KSerializer<List<DescriptorMapping>> {
     private val internalSerializer = ListSerializer(DescriptorMappingSerializer)
     override val descriptor = internalSerializer.descriptor
     override fun deserialize(decoder: Decoder) = internalSerializer.deserialize(decoder)
-    override fun serialize(encoder: Encoder, value: List<DescriptorMapping>) = internalSerializer.serialize(encoder, value)
+    override fun serialize(encoder: Encoder, value: List<DescriptorMapping>) =
+        internalSerializer.serialize(encoder, value)
 }

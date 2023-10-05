@@ -9,21 +9,23 @@ import kotlinx.serialization.json.jsonObject
 
 @Serializable
 data class OfferedCredential(
-        val format: CredentialFormat,
-        val types: List<String>? = null,
-        @SerialName("doctype") val docType: String? = null,
-        @SerialName("credential_definition") val credentialDefinition: JsonLDCredentialDefinition? = null,
-        override val customParameters: Map<String, JsonElement> = mapOf()
-): JsonDataObject() {
+    val format: CredentialFormat,
+    val types: List<String>? = null,
+    @SerialName("doctype") val docType: String? = null,
+    @SerialName("credential_definition") val credentialDefinition: JsonLDCredentialDefinition? = null,
+    override val customParameters: Map<String, JsonElement> = mapOf()
+) : JsonDataObject() {
     override fun toJSON() = Json.encodeToJsonElement(OfferedCredentialSerializer, this).jsonObject
 
-    companion object: JsonDataObjectFactory<OfferedCredential>() {
-      override fun fromJSON(jsonObject: JsonObject) = Json.decodeFromJsonElement(OfferedCredentialSerializer, jsonObject)
-      fun fromProviderMetadata(credential: CredentialSupported) = OfferedCredential(
-        credential.format, credential.types, credential.docType,
-        JsonLDCredentialDefinition(credential.context, credential.types), credential.customParameters
-      )
+    companion object : JsonDataObjectFactory<OfferedCredential>() {
+        override fun fromJSON(jsonObject: JsonObject) =
+            Json.decodeFromJsonElement(OfferedCredentialSerializer, jsonObject)
+
+        fun fromProviderMetadata(credential: CredentialSupported) = OfferedCredential(
+            credential.format, credential.types, credential.docType,
+            JsonLDCredentialDefinition(credential.context, credential.types), credential.customParameters
+        )
     }
 }
 
-object OfferedCredentialSerializer: JsonDataObjectSerializer<OfferedCredential>(OfferedCredential.serializer())
+object OfferedCredentialSerializer : JsonDataObjectSerializer<OfferedCredential>(OfferedCredential.serializer())

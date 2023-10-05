@@ -15,12 +15,13 @@ data class OutputDescriptor(
     val schema: String,
     val name: String? = null,
     override val customParameters: Map<String, JsonElement> = mapOf()
-): JsonDataObject() {
+) : JsonDataObject() {
     override fun toJSON() = Json.encodeToJsonElement(OutputDescriptorSerializer, this).jsonObject
 
-    companion object: JsonDataObjectFactory<OutputDescriptor>() {
-        override fun fromJSON(jsonObject: JsonObject) = Json.decodeFromJsonElement(OutputDescriptorSerializer, jsonObject)
+    companion object : JsonDataObjectFactory<OutputDescriptor>() {
+        override fun fromJSON(jsonObject: JsonObject) =
+            Json.decodeFromJsonElement(OutputDescriptorSerializer, jsonObject)
     }
 }
 
-object OutputDescriptorSerializer: JsonDataObjectSerializer<OutputDescriptor>(OutputDescriptor.serializer())
+object OutputDescriptorSerializer : JsonDataObjectSerializer<OutputDescriptor>(OutputDescriptor.serializer())

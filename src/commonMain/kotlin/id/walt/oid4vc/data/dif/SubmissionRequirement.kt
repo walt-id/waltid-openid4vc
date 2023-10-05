@@ -25,18 +25,22 @@ data class SubmissionRequirement(
     val min: Int? = null,
     val max: Int? = null,
     override val customParameters: Map<String, JsonElement> = mapOf()
-): JsonDataObject() {
+) : JsonDataObject() {
     override fun toJSON() = Json.encodeToJsonElement(SubmissionRequirementSerializer, this).jsonObject
-    companion object: JsonDataObjectFactory<SubmissionRequirement>() {
-        override fun fromJSON(jsonObject: JsonObject) = Json.decodeFromJsonElement(SubmissionRequirementSerializer, jsonObject)
+
+    companion object : JsonDataObjectFactory<SubmissionRequirement>() {
+        override fun fromJSON(jsonObject: JsonObject) =
+            Json.decodeFromJsonElement(SubmissionRequirementSerializer, jsonObject)
     }
 }
 
-object SubmissionRequirementSerializer: JsonDataObjectSerializer<SubmissionRequirement>(SubmissionRequirement.serializer())
+object SubmissionRequirementSerializer :
+    JsonDataObjectSerializer<SubmissionRequirement>(SubmissionRequirement.serializer())
 
-object SubmissionRequirementListSerializer: KSerializer<List<SubmissionRequirement>> {
+object SubmissionRequirementListSerializer : KSerializer<List<SubmissionRequirement>> {
     private val internalSerializer = ListSerializer(SubmissionRequirementSerializer)
     override val descriptor = internalSerializer.descriptor
     override fun deserialize(decoder: Decoder) = internalSerializer.deserialize(decoder)
-    override fun serialize(encoder: Encoder, value: List<SubmissionRequirement>) = internalSerializer.serialize(encoder, value)
+    override fun serialize(encoder: Encoder, value: List<SubmissionRequirement>) =
+        internalSerializer.serialize(encoder, value)
 }

@@ -17,15 +17,12 @@ import id.walt.oid4vc.responses.TokenResponse
 import id.walt.oid4vc.util.randomUUID
 import io.ktor.http.*
 import kotlinx.datetime.Clock
-import kotlinx.datetime.DateTimeUnit
-import kotlinx.datetime.plus
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlin.time.Duration
-import kotlin.time.DurationUnit
 
 /**
  * Base object for a self-issued OpenID provider, providing identity information by presenting verifiable credentials,
@@ -62,11 +59,11 @@ abstract class SIOPCredentialProvider(
         )
     }
 
-  open fun getCIProviderMetadataUrl(baseUrl: String): String {
-    return URLBuilder(baseUrl).apply {
-      pathSegments = this.pathSegments.plus(listOf(".well-known", "openid-credential-issuer"))
-    }.buildString()
-  }
+    open fun getCIProviderMetadataUrl(baseUrl: String): String {
+        return URLBuilder(baseUrl).apply {
+            pathSegments = this.pathSegments.plus(listOf(".well-known", "openid-credential-issuer"))
+        }.buildString()
+    }
 
     fun getCommonProviderMetadataUrl(baseUrl: String): String {
         return URLBuilder(baseUrl).apply {
@@ -82,7 +79,7 @@ abstract class SIOPCredentialProvider(
         return (authorizationRequest.responseType == ResponseType.vp_token.name &&
                 authorizationRequest.presentationDefinition != null &&
                 isPresentationDefinitionSupported(authorizationRequest.presentationDefinition)
-            ) //|| true // FIXME
+                ) //|| true // FIXME
     }
 
     protected open fun resolveVPAuthorizationParameters(authorizationRequest: AuthorizationRequest): AuthorizationRequest {
@@ -116,13 +113,13 @@ abstract class SIOPCredentialProvider(
         }
     }
 
-    override fun initializeAuthorization(authorizationRequest: AuthorizationRequest, expiresIn: Int): SIOPSession {
+    override fun initializeAuthorization(authorizationRequest: AuthorizationRequest, expiresIn: Duration): SIOPSession {
         val resolvedAuthReq = resolveVPAuthorizationParameters(authorizationRequest)
         return if (validateAuthorizationRequest(resolvedAuthReq)) {
             SIOPSession(
                 id = randomUUID(),
                 authorizationRequest = resolvedAuthReq,
-                expirationTimestamp = Clock.System.now().plus(expiresIn, DateTimeUnit.SECOND).epochSeconds
+                expirationTimestamp = Clock.System.now().plus(expiresIn)
             )
         } else {
             throw AuthorizationError(
@@ -143,9 +140,17 @@ abstract class SIOPCredentialProvider(
         )
         val result = generatePresentation(presentationDefinition, session.authorizationRequest.nonce)
         return if (result.presentations.size == 1) {
-            TokenResponse.success(result.presentations.first(), result.presentationSubmission, session.authorizationRequest?.state)
+            TokenResponse.success(
+                result.presentations.first(),
+                result.presentationSubmission,
+                session.authorizationRequest.state
+            )
         } else {
-            TokenResponse.success(JsonArray(result.presentations), result.presentationSubmission, session.authorizationRequest?.state)
+            TokenResponse.success(
+                JsonArray(result.presentations),
+                result.presentationSubmission,
+                session.authorizationRequest.state
+            )
         }
     }
 }

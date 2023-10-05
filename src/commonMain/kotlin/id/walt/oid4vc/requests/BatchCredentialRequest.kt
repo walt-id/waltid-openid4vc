@@ -12,14 +12,16 @@ import kotlinx.serialization.json.jsonObject
 
 @Serializable
 data class BatchCredentialRequest(
-  @SerialName("credential_requests") @Serializable(CredentialRequestListSerializer::class) val credentialRequests: List<CredentialRequest>,
-  override val customParameters: Map<String, JsonElement> = mapOf()
-): JsonDataObject() {
-  override fun toJSON() = Json.encodeToJsonElement(BatchCredentialRequestSerializer, this).jsonObject
+    @SerialName("credential_requests") @Serializable(CredentialRequestListSerializer::class) val credentialRequests: List<CredentialRequest>,
+    override val customParameters: Map<String, JsonElement> = mapOf()
+) : JsonDataObject() {
+    override fun toJSON() = Json.encodeToJsonElement(BatchCredentialRequestSerializer, this).jsonObject
 
-  companion object: JsonDataObjectFactory<BatchCredentialRequest>() {
-    override fun fromJSON(jsonObject: JsonObject) = Json.decodeFromJsonElement(BatchCredentialRequestSerializer, jsonObject)
-  }
+    companion object : JsonDataObjectFactory<BatchCredentialRequest>() {
+        override fun fromJSON(jsonObject: JsonObject) =
+            Json.decodeFromJsonElement(BatchCredentialRequestSerializer, jsonObject)
+    }
 }
 
-object BatchCredentialRequestSerializer: JsonDataObjectSerializer<BatchCredentialRequest>(BatchCredentialRequest.serializer())
+object BatchCredentialRequestSerializer :
+    JsonDataObjectSerializer<BatchCredentialRequest>(BatchCredentialRequest.serializer())

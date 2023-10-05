@@ -18,6 +18,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 
 abstract class OpenIDProvider<S : AuthorizationSession>(
     val baseUrl: String,
@@ -48,7 +50,7 @@ abstract class OpenIDProvider<S : AuthorizationSession>(
 
     protected open fun generateToken(sub: String, audience: TokenTarget, tokenId: String? = null): String {
         return signToken(audience, buildJsonObject {
-            put(JWTClaims.Payload.subject, sub);
+            put(JWTClaims.Payload.subject, sub)
             put(JWTClaims.Payload.issuer, metadata.issuer)
             put(JWTClaims.Payload.audience, audience.name)
             tokenId?.let { put(JWTClaims.Payload.jwtID, it) }
@@ -58,7 +60,13 @@ abstract class OpenIDProvider<S : AuthorizationSession>(
     protected open fun verifyAndParseToken(token: String, target: TokenTarget): JsonObject? {
         if (verifyTokenSignature(target, token)) {
             val payload = parseTokenPayload(token)
-            if (payload.keys.containsAll(setOf(JWTClaims.Payload.subject, JWTClaims.Payload.audience, JWTClaims.Payload.issuer)) &&
+            if (payload.keys.containsAll(
+                    setOf(
+                        JWTClaims.Payload.subject,
+                        JWTClaims.Payload.audience,
+                        JWTClaims.Payload.issuer
+                    )
+                ) &&
                 payload[JWTClaims.Payload.audience]!!.jsonPrimitive.content == target.name &&
                 payload[JWTClaims.Payload.issuer]!!.jsonPrimitive.content == metadata.issuer
             ) {
@@ -78,7 +86,7 @@ abstract class OpenIDProvider<S : AuthorizationSession>(
 
     protected abstract fun validateAuthorizationRequest(authorizationRequest: AuthorizationRequest): Boolean
 
-    abstract fun initializeAuthorization(authorizationRequest: AuthorizationRequest, expiresIn: Int): S
+    abstract fun initializeAuthorization(authorizationRequest: AuthorizationRequest, expiresIn: Duration): S
     open fun processCodeFlowAuthorization(authorizationRequest: AuthorizationRequest): AuthorizationCodeResponse {
         if (authorizationRequest.responseType != ResponseType.code.name)
             throw AuthorizationError(
@@ -92,14 +100,20 @@ abstract class OpenIDProvider<S : AuthorizationSession>(
     }
 
     open fun processImplicitFlowAuthorization(authorizationRequest: AuthorizationRequest): TokenResponse {
+        println("> processImplicitFlowAuthorization for $authorizationRequest")
         if (!authorizationRequest.responseType.contains(ResponseType.token.name))
             throw AuthorizationError(
                 authorizationRequest,
                 AuthorizationErrorCode.invalid_request,
                 message = "Invalid response type ${authorizationRequest.responseType}, for implicit authorization flow."
             )
+        println("> processImplicitFlowAuthorization: Generating authorizationSession (getOrInitAuthorizationSession)...")
         val authorizationSession = getOrInitAuthorizationSession(authorizationRequest)
-        return generateTokenResponse(authorizationSession, TokenRequest(GrantType.implicit, authorizationRequest.clientId))
+        println("> processImplicitFlowAuthorization: generateTokenResponse...")
+        return generateTokenResponse(
+            authorizationSession,
+            TokenRequest(GrantType.implicit, authorizationRequest.clientId)
+        )
     }
 
     protected open fun generateTokenResponse(session: S, tokenRequest: TokenRequest): TokenResponse {
@@ -154,13 +168,13 @@ abstract class OpenIDProvider<S : AuthorizationSession>(
 
     fun getPushedAuthorizationSuccessResponse(authorizationSession: S) = PushedAuthorizationResponse.success(
         requestUri = "urn:ietf:params:oauth:request_uri:${authorizationSession.id}",
-        expiresIn = authorizationSession.expirationTimestamp - Clock.System.now().epochSeconds
+        expiresIn = authorizationSession.expirationTimestamp - Clock.System.now()
     )
 
     protected open fun getOrInitAuthorizationSession(authorizationRequest: AuthorizationRequest): S {
         return when (authorizationRequest.isReferenceToPAR) {
             true -> getPushedAuthorizationSession(authorizationRequest)
-            false -> initializeAuthorization(authorizationRequest, 600)
+            false -> initializeAuthorization(authorizationRequest, 5.minutes)
         }
     }
 

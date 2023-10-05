@@ -59,31 +59,34 @@ order: [...]
  * @param order OPTIONAL. An array of claims.display.name values that lists them in the order they should be displayed by the Wallet.
  */
 @Serializable
-data class CredentialSupported (
-  val format: CredentialFormat,
-  val id: String? = null,
-  @SerialName("cryptographic_binding_methods_supported") val cryptographicBindingMethodsSupported: Set<String>? = null,
-  @SerialName("cryptographic_suites_supported") val cryptographicSuitesSupported: Set<String>? = null,
-  @Serializable(DisplayPropertiesListSerializer::class) val display: List<DisplayProperties>? = null,
-  @SerialName("@context") val context: List<JsonElement>? = null,
-  val types: List<String>? = null,
-  @SerialName("doctype") val docType: String? = null,
-  @Serializable(ClaimDescriptorMapSerializer::class) val credentialSubject: Map<String, ClaimDescriptor>? = null,
-  @Serializable(ClaimDescriptorNamespacedMapSerializer::class) val claims: Map<String, Map<String, ClaimDescriptor>>? = null,
-  val order: List<String>? = null,
-  override val customParameters: Map<String, JsonElement> = mapOf()
-): JsonDataObject() {
-  override fun toJSON(): JsonObject = Json.encodeToJsonElement(CredentialSupportedSerializer, this).jsonObject
-  companion object: JsonDataObjectFactory<CredentialSupported>() {
-    override fun fromJSON(jsonObject: JsonObject): CredentialSupported = Json.decodeFromJsonElement(CredentialSupportedSerializer, jsonObject)
-  }
+data class CredentialSupported(
+    val format: CredentialFormat,
+    val id: String? = null,
+    @SerialName("cryptographic_binding_methods_supported") val cryptographicBindingMethodsSupported: Set<String>? = null,
+    @SerialName("cryptographic_suites_supported") val cryptographicSuitesSupported: Set<String>? = null,
+    @Serializable(DisplayPropertiesListSerializer::class) val display: List<DisplayProperties>? = null,
+    @SerialName("@context") val context: List<JsonElement>? = null,
+    val types: List<String>? = null,
+    @SerialName("doctype") val docType: String? = null,
+    @Serializable(ClaimDescriptorMapSerializer::class) val credentialSubject: Map<String, ClaimDescriptor>? = null,
+    @Serializable(ClaimDescriptorNamespacedMapSerializer::class) val claims: Map<String, Map<String, ClaimDescriptor>>? = null,
+    val order: List<String>? = null,
+    override val customParameters: Map<String, JsonElement> = mapOf()
+) : JsonDataObject() {
+    override fun toJSON(): JsonObject = Json.encodeToJsonElement(CredentialSupportedSerializer, this).jsonObject
+
+    companion object : JsonDataObjectFactory<CredentialSupported>() {
+        override fun fromJSON(jsonObject: JsonObject): CredentialSupported =
+            Json.decodeFromJsonElement(CredentialSupportedSerializer, jsonObject)
+    }
 }
 
-object CredentialSupportedSerializer: JsonDataObjectSerializer<CredentialSupported>(CredentialSupported.serializer())
+object CredentialSupportedSerializer : JsonDataObjectSerializer<CredentialSupported>(CredentialSupported.serializer())
 
-object CredentialSupportedListSerializer: KSerializer<List<CredentialSupported>> {
-  private val internalSerializer = ListSerializer(CredentialSupportedSerializer)
-  override val descriptor: SerialDescriptor = internalSerializer.descriptor
-  override fun deserialize(decoder: Decoder) = internalSerializer.deserialize(decoder)
-  override fun serialize(encoder: Encoder, value: List<CredentialSupported>) = internalSerializer.serialize(encoder, value)
+object CredentialSupportedListSerializer : KSerializer<List<CredentialSupported>> {
+    private val internalSerializer = ListSerializer(CredentialSupportedSerializer)
+    override val descriptor: SerialDescriptor = internalSerializer.descriptor
+    override fun deserialize(decoder: Decoder) = internalSerializer.deserialize(decoder)
+    override fun serialize(encoder: Encoder, value: List<CredentialSupported>) =
+        internalSerializer.serialize(encoder, value)
 }

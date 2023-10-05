@@ -3,9 +3,13 @@ package id.walt.oid4vc
 import id.walt.auditor.Auditor
 import id.walt.auditor.policies.SignaturePolicy
 import id.walt.credentials.w3c.VerifiableCredential
-import id.walt.oid4vc.data.*
+import id.walt.oid4vc.data.AuthorizationDetails
+import id.walt.oid4vc.data.CredentialFormat
+import id.walt.oid4vc.data.GrantType
+import id.walt.oid4vc.data.OpenIDProviderMetadata
 import id.walt.oid4vc.providers.OpenIDClientConfig
 import id.walt.oid4vc.providers.SIOPProviderConfig
+import id.walt.oid4vc.requests.AuthorizationRequest
 import id.walt.oid4vc.requests.CredentialOfferRequest
 import id.walt.oid4vc.requests.CredentialRequest
 import id.walt.oid4vc.requests.TokenRequest
@@ -55,14 +59,50 @@ class wallettest : AnnotationSpec() {
         ServiceMatrix("service-matrix.properties")
         ciTestProvider = CITestProvider()
         credentialWallet = TestCredentialWallet(SIOPProviderConfig("http://blank"))
-        ciTestProvider.start()
+        //ciTestProvider.start()
     }
 
     //@Test   /* Uncomment me */
     suspend fun testPreauth() {
         // vvv UPDATE BELOW URL WITH OFFER_URI vvv
-        val offerUri = "openid-credential-offer://localhost/?credential_offer=%7B%22credential_issuer%22%3A%22http%3A%2F%2Flocalhost%3A3000%22%2C%22credentials%22%3A%5B%7B%22format%22%3A%22jwt_vc_json%22%2C%22types%22%3A%5B%22VerifiableCredential%22%2C%22OpenBadgeCredential%22%5D%2C%22credential_definition%22%3A%7B%22%40context%22%3A%5B%22https%3A%2F%2Fwww.w3.org%2F2018%2Fcredentials%2Fv1%22%2C%22https%3A%2F%2Fpurl.imsglobal.org%2Fspec%2Fob%2Fv3p0%2Fcontext.json%22%5D%2C%22types%22%3A%5B%22VerifiableCredential%22%2C%22OpenBadgeCredential%22%5D%7D%7D%5D%2C%22grants%22%3A%7B%22authorization_code%22%3A%7B%22issuer_state%22%3A%22fdc39e8d-973c-4dd1-9270-f38dd504cbe4%22%7D%2C%22urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Apre-authorized_code%22%3A%7B%22pre-authorized_code%22%3A%22eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiJmZGMzOWU4ZC05NzNjLTRkZDEtOTI3MC1mMzhkZDUwNGNiZTQiLCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjMwMDAiLCJhdWQiOiJUT0tFTiJ9._LFdtxLPr7rk43s_70lsUvQMctHyNQNKY79IjNMeCyHwgnkwtsmp7ncWEmF14T2v17aLKxwFHN0Eg8JcT6EeCQ%22%2C%22user_pin_required%22%3Afalse%7D%7D%7D"
+        val offerUri =
+            "openid-credential-offer://issuer.portal.walt.id/?credential_offer=%7B%22credential_issuer%22%3A%22https%3A%2F%2Fissuer.portal.walt.id%22%2C%22credentials%22%3A%5B%7B%22format%22%3A%22jwt_vc_json%22%2C%22types%22%3A%5B%22VerifiableCredential%22%2C%22OpenBadgeCredential%22%5D%2C%22credential_definition%22%3A%7B%22%40context%22%3A%5B%22https%3A%2F%2Fwww.w3.org%2F2018%2Fcredentials%2Fv1%22%2C%22https%3A%2F%2Fpurl.imsglobal.org%2Fspec%2Fob%2Fv3p0%2Fcontext.json%22%5D%2C%22types%22%3A%5B%22VerifiableCredential%22%2C%22OpenBadgeCredential%22%5D%7D%7D%5D%2C%22grants%22%3A%7B%22authorization_code%22%3A%7B%22issuer_state%22%3A%22a9dec312-be7f-40c2-bee9-4e5275d49827%22%7D%2C%22urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Apre-authorized_code%22%3A%7B%22pre-authorized_code%22%3A%22eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiJhOWRlYzMxMi1iZTdmLTQwYzItYmVlOS00ZTUyNzVkNDk4MjciLCJpc3MiOiJodHRwczovL2lzc3Vlci5wb3J0YWwud2FsdC5pZCIsImF1ZCI6IlRPS0VOIn0.LqgJurAZs862qNBqNGHSzPianqhlUpsayVXWmd0E6tQhrh_cgY5oqiUy1_hMO09aj37OmPRsQ4DFq7ufNo1kAA%22%2C%22user_pin_required%22%3Afalse%7D%7D%7D"
         // ^^^ UPDATE ABOVE URL WITH OFFER_URI ^^^
+
+        AuthorizationRequest(
+            responseType = "",
+            clientId = "",
+            responseMode = null,
+            redirectUri = null,
+            scope = setOf(),
+            state = null,
+            authorizationDetails = listOf(),
+            walletIssuer = null,
+            userHint = null,
+            issuerState = null,
+            requestUri = null,
+            presentationDefinition = null,
+            presentationDefinitionUri = null,
+            clientIdScheme = null,
+            clientMetadata = null,
+            clientMetadataUri = null,
+            nonce = null,
+            responseUri = null,
+            customParameters = mapOf()
+
+        )
+
+        AuthorizationDetails(
+            type = "minim",
+            format = null,
+            types = listOf(),
+            credentialSubject = mapOf(),
+            docType = null,
+            claims = mapOf(),
+            credentialDefinition = null,
+            customParameters = mapOf()
+
+        )
 
         println("// -------- WALLET ----------")
         println("// as WALLET: receive credential offer, either being called via deeplink or by scanning QR code")
@@ -76,7 +116,8 @@ class wallettest : AnnotationSpec() {
         parsedOfferReq.credentialOffer!!.grants[GrantType.pre_authorized_code.value]?.preAuthorizedCode shouldNotBe null
 
         println("// get issuer metadata")
-        val providerMetadataUri = credentialWallet.getCIProviderMetadataUrl(parsedOfferReq.credentialOffer!!.credentialIssuer)
+        val providerMetadataUri =
+            credentialWallet.getCIProviderMetadataUrl(parsedOfferReq.credentialOffer!!.credentialIssuer)
         val providerMetadata = ktorClient.get(providerMetadataUri).call.body<OpenIDProviderMetadata>()
         println("providerMetadata: $providerMetadata")
 

@@ -19,12 +19,14 @@ data class PresentationDefinition(
     @Serializable(VCFormatMapSerializer::class) val format: Map<VCFormat, VCFormatDefinition>? = null,
     @SerialName("submission_requirements") @Serializable(SubmissionRequirementListSerializer::class) val submissionRequirements: List<SubmissionRequirement>? = null,
     override val customParameters: Map<String, JsonElement> = mapOf()
-): JsonDataObject() {
+) : JsonDataObject() {
     override fun toJSON() = Json.encodeToJsonElement(PresentationDefinitionSerializer, this).jsonObject
 
-    companion object: JsonDataObjectFactory<PresentationDefinition>() {
-        override fun fromJSON(jsonObject: JsonObject) = Json.decodeFromJsonElement(PresentationDefinitionSerializer, jsonObject)
+    companion object : JsonDataObjectFactory<PresentationDefinition>() {
+        override fun fromJSON(jsonObject: JsonObject) =
+            Json.decodeFromJsonElement(PresentationDefinitionSerializer, jsonObject)
     }
 }
 
-object PresentationDefinitionSerializer: JsonDataObjectSerializer<PresentationDefinition>(PresentationDefinition.serializer())
+object PresentationDefinitionSerializer :
+    JsonDataObjectSerializer<PresentationDefinition>(PresentationDefinition.serializer())

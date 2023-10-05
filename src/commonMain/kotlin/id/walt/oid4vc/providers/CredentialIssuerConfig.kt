@@ -5,5 +5,5 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 class CredentialIssuerConfig(
-  val credentialsSupported: List<CredentialSupported> = listOf()
-): OpenIDProviderConfig()
+    val credentialsSupported: List<CredentialSupported> = listOf()
+) : OpenIDProviderConfig()

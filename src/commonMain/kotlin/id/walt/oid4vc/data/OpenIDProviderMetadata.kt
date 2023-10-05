@@ -60,59 +60,68 @@ import kotlinx.serialization.json.jsonObject
  */
 @Serializable
 data class OpenIDProviderMetadata(
-  @SerialName("issuer") val issuer: String? = null,
-  @SerialName("authorization_endpoint") val authorizationEndpoint: String? = null,
-  @SerialName("pushed_authorization_request_endpoint") val pushedAuthorizationRequestEndpoint: String? = null,
-  @SerialName("token_endpoint") val tokenEndpoint: String? = null,
-  @SerialName("userinfo_endpoint") val userinfoEndpoint: String? = null,
-  @SerialName("jwks_uri") val jwksUri: String? = null,
-  @SerialName("registration_endpoint") val registrationEndpoint: String? = null,
-  @EncodeDefault @SerialName("scopes_supported") val scopesSupported: Set<String> = setOf("openid"),
-  @SerialName("response_types_supported") val responseTypesSupported: Set<String>? = null,
-  @EncodeDefault @SerialName("response_modes_supported") val responseModesSupported: Set<ResponseMode> = setOf(ResponseMode.query, ResponseMode.fragment),
-  @EncodeDefault @SerialName("grant_types_supported") @Serializable(GrantTypeSetSerializer::class) val grantTypesSupported: Set<GrantType> = setOf(GrantType.authorization_code, GrantType.pre_authorized_code),
-  @SerialName("acr_values_supported") val acrValuesSupported: Set<String>? = null,
-  @SerialName("subject_types_supported") val subjectTypesSupported: Set<SubjectType>? = null,
-  @SerialName("id_token_signing_alg_values_supported") val idTokenSigningAlgValuesSupported: Set<String>? = null,
-  @SerialName("id_token_encryption_alg_values_supported") val idTokenEncryptionAlgValuesSupported: Set<String>? = null,
-  @SerialName("id_token_encryption_enc_values_supported") val idTokenEncryptionEncValuesSupported: Set<String>? = null,
-  @SerialName("userinfo_signing_alg_values_supported") val userinfoSigningAlgValuesSupported: Set<String>? = null,
-  @SerialName("userinfo_encryption_alg_values_supported") val userinfoEncryptionAlgValuesSupported: Set<String>? = null,
-  @SerialName("userinfo_encryption_enc_values_supported") val userinfoEncryptionEncValuesSupported: Set<String>? = null,
-  @SerialName("request_object_signing_alg_values_supported") val requestObjectSigningAlgValuesSupported: Set<String>? = null,
-  @SerialName("request_object_encryption_alg_values_supported") val requestObjectEncryptionAlgValuesSupported: Set<String>? = null,
-  @SerialName("request_object_encryption_enc_values_supported") val requestObjectEncryptionEncValuesSupported: Set<String>? = null,
-  @SerialName("token_endpoint_auth_methods_supported") val tokenEndpointAuthMethodsSupported: Set<String>? = null,
-  @SerialName("token_endpoint_auth_signing_alg_values_supported") val tokenEndpointAuthSigningAlgValuesSupported: Set<String>? = null,
-  @SerialName("display_values_supported") val displayValuesSupported: Set<String>? = null,
-  @SerialName("claim_types_supported") val claimTypesSupported: Set<String>? = null,
-  @SerialName("claims_supported") val claimsSupported: Set<String>? = null,
-  @SerialName("service_documentation") val serviceDocumentation: String? = null,
-  @SerialName("claims_locales_supported") val claimsLocalesSupported: Set<String>? = null,
-  @SerialName("ui_locales_supported") val uiLocalesSupported: Set<String>? = null,
-  @SerialName("claims_parameter_supported") val claimsParameterSupported: Boolean = false,
-  @SerialName("request_parameter_supported") val requestParameterSupported: Boolean = false,
-  @SerialName("request_uri_parameter_supported") val requestUriParameterSupported: Boolean = true,
-  @SerialName("require_request_uri_registration") val requireRequestUriRegistration: Boolean = false,
-  @SerialName("op_policy_uri") val opPolicyUri: String? = null,
-  @SerialName("op_tos_uri") val opTosUri: String? = null,
-  // OID4VCI properties
-  @SerialName("credential_issuer") val credentialIssuer: String? = null,
-  @SerialName("credential_endpoint") val credentialEndpoint: String? = null,
-  @SerialName("credentials_supported") @Serializable(CredentialSupportedListSerializer::class) val credentialsSupported: List<CredentialSupported>? = null,
-  @SerialName("batch_credential_endpoint") val batchCredentialEndpoint: String? = null,
-  @SerialName("deferred_credential_endpoint") val deferredCredentialEndpoint: String? = null,
-  @SerialName("authorization_server") val authorizationServer: String? = null,
-  @SerialName("display") @Serializable(DisplayPropertiesListSerializer::class) val display: List<DisplayProperties>? = null,
-  @SerialName("presentation_definition_uri_supported") val presentationDefinitionUriSupported: Boolean? = null,
-  @SerialName("vp_formats_supported") @Serializable(SupportedVPFormatMapSerializer::class) val vpFormatsSupported: Map<CredentialFormat, SupportedVPFormat>? = null,
-  @SerialName("client_id_schemes_supported") val clientIdSchemesSupported: List<String>? = null,
-  override val customParameters: Map<String, JsonElement> = mapOf()
-): JsonDataObject() {
-  override fun toJSON(): JsonObject = Json.encodeToJsonElement(OpenIDProviderMetadataSerializer, this).jsonObject
-  companion object: JsonDataObjectFactory<OpenIDProviderMetadata>() {
-    override fun fromJSON(jsonObject: JsonObject): OpenIDProviderMetadata = Json.decodeFromJsonElement(OpenIDProviderMetadataSerializer, jsonObject)
-  }
+    @SerialName("issuer") val issuer: String? = null,
+    @SerialName("authorization_endpoint") val authorizationEndpoint: String? = null,
+    @SerialName("pushed_authorization_request_endpoint") val pushedAuthorizationRequestEndpoint: String? = null,
+    @SerialName("token_endpoint") val tokenEndpoint: String? = null,
+    @SerialName("userinfo_endpoint") val userinfoEndpoint: String? = null,
+    @SerialName("jwks_uri") val jwksUri: String? = null,
+    @SerialName("registration_endpoint") val registrationEndpoint: String? = null,
+    @EncodeDefault @SerialName("scopes_supported") val scopesSupported: Set<String> = setOf("openid"),
+    @SerialName("response_types_supported") val responseTypesSupported: Set<String>? = null,
+    @EncodeDefault @SerialName("response_modes_supported") val responseModesSupported: Set<ResponseMode> = setOf(
+        ResponseMode.query,
+        ResponseMode.fragment
+    ),
+    @EncodeDefault @SerialName("grant_types_supported") @Serializable(GrantTypeSetSerializer::class) val grantTypesSupported: Set<GrantType> = setOf(
+        GrantType.authorization_code,
+        GrantType.pre_authorized_code
+    ),
+    @SerialName("acr_values_supported") val acrValuesSupported: Set<String>? = null,
+    @SerialName("subject_types_supported") val subjectTypesSupported: Set<SubjectType>? = null,
+    @SerialName("id_token_signing_alg_values_supported") val idTokenSigningAlgValuesSupported: Set<String>? = null,
+    @SerialName("id_token_encryption_alg_values_supported") val idTokenEncryptionAlgValuesSupported: Set<String>? = null,
+    @SerialName("id_token_encryption_enc_values_supported") val idTokenEncryptionEncValuesSupported: Set<String>? = null,
+    @SerialName("userinfo_signing_alg_values_supported") val userinfoSigningAlgValuesSupported: Set<String>? = null,
+    @SerialName("userinfo_encryption_alg_values_supported") val userinfoEncryptionAlgValuesSupported: Set<String>? = null,
+    @SerialName("userinfo_encryption_enc_values_supported") val userinfoEncryptionEncValuesSupported: Set<String>? = null,
+    @SerialName("request_object_signing_alg_values_supported") val requestObjectSigningAlgValuesSupported: Set<String>? = null,
+    @SerialName("request_object_encryption_alg_values_supported") val requestObjectEncryptionAlgValuesSupported: Set<String>? = null,
+    @SerialName("request_object_encryption_enc_values_supported") val requestObjectEncryptionEncValuesSupported: Set<String>? = null,
+    @SerialName("token_endpoint_auth_methods_supported") val tokenEndpointAuthMethodsSupported: Set<String>? = null,
+    @SerialName("token_endpoint_auth_signing_alg_values_supported") val tokenEndpointAuthSigningAlgValuesSupported: Set<String>? = null,
+    @SerialName("display_values_supported") val displayValuesSupported: Set<String>? = null,
+    @SerialName("claim_types_supported") val claimTypesSupported: Set<String>? = null,
+    @SerialName("claims_supported") val claimsSupported: Set<String>? = null,
+    @SerialName("service_documentation") val serviceDocumentation: String? = null,
+    @SerialName("claims_locales_supported") val claimsLocalesSupported: Set<String>? = null,
+    @SerialName("ui_locales_supported") val uiLocalesSupported: Set<String>? = null,
+    @SerialName("claims_parameter_supported") val claimsParameterSupported: Boolean = false,
+    @SerialName("request_parameter_supported") val requestParameterSupported: Boolean = false,
+    @SerialName("request_uri_parameter_supported") val requestUriParameterSupported: Boolean = true,
+    @SerialName("require_request_uri_registration") val requireRequestUriRegistration: Boolean = false,
+    @SerialName("op_policy_uri") val opPolicyUri: String? = null,
+    @SerialName("op_tos_uri") val opTosUri: String? = null,
+    // OID4VCI properties
+    @SerialName("credential_issuer") val credentialIssuer: String? = null,
+    @SerialName("credential_endpoint") val credentialEndpoint: String? = null,
+    @SerialName("credentials_supported") @Serializable(CredentialSupportedListSerializer::class) val credentialsSupported: List<CredentialSupported>? = null,
+    @SerialName("batch_credential_endpoint") val batchCredentialEndpoint: String? = null,
+    @SerialName("deferred_credential_endpoint") val deferredCredentialEndpoint: String? = null,
+    @SerialName("authorization_server") val authorizationServer: String? = null,
+    @SerialName("display") @Serializable(DisplayPropertiesListSerializer::class) val display: List<DisplayProperties>? = null,
+    @SerialName("presentation_definition_uri_supported") val presentationDefinitionUriSupported: Boolean? = null,
+    @SerialName("vp_formats_supported") @Serializable(SupportedVPFormatMapSerializer::class) val vpFormatsSupported: Map<CredentialFormat, SupportedVPFormat>? = null,
+    @SerialName("client_id_schemes_supported") val clientIdSchemesSupported: List<String>? = null,
+    override val customParameters: Map<String, JsonElement> = mapOf()
+) : JsonDataObject() {
+    override fun toJSON(): JsonObject = Json.encodeToJsonElement(OpenIDProviderMetadataSerializer, this).jsonObject
+
+    companion object : JsonDataObjectFactory<OpenIDProviderMetadata>() {
+        override fun fromJSON(jsonObject: JsonObject): OpenIDProviderMetadata =
+            Json.decodeFromJsonElement(OpenIDProviderMetadataSerializer, jsonObject)
+    }
 }
 
-object OpenIDProviderMetadataSerializer: JsonDataObjectSerializer<OpenIDProviderMetadata>(OpenIDProviderMetadata.serializer())
+object OpenIDProviderMetadataSerializer :
+    JsonDataObjectSerializer<OpenIDProviderMetadata>(OpenIDProviderMetadata.serializer())

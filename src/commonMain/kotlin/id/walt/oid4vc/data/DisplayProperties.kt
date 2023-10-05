@@ -22,26 +22,29 @@ import kotlinx.serialization.json.jsonObject
  * @param textColor String value of a text color of the Credential represented as numerical color values defined in CSS Color Module Level 37 [CSS-Color].
  */
 @Serializable
-data class DisplayProperties (
-  val name: String,
-  val locale: String? = null,
-  @Serializable(LogoPropertiesSerializer::class) val logo: LogoProperties? = null,
-  val description: String? = null,
-  @SerialName("background_color") val backgroundColor: String? = null,
-  @SerialName("text_color") val textColor: String? = null,
-  override val customParameters: Map<String, JsonElement> = mapOf()
-): JsonDataObject() {
-  override fun toJSON(): JsonObject = Json.encodeToJsonElement(DisplayPropertiesSerializer, this).jsonObject
-  companion object: JsonDataObjectFactory<DisplayProperties>() {
-    override fun fromJSON(jsonObject: JsonObject): DisplayProperties = Json.decodeFromJsonElement(DisplayPropertiesSerializer, jsonObject)
-  }
+data class DisplayProperties(
+    val name: String,
+    val locale: String? = null,
+    @Serializable(LogoPropertiesSerializer::class) val logo: LogoProperties? = null,
+    val description: String? = null,
+    @SerialName("background_color") val backgroundColor: String? = null,
+    @SerialName("text_color") val textColor: String? = null,
+    override val customParameters: Map<String, JsonElement> = mapOf()
+) : JsonDataObject() {
+    override fun toJSON(): JsonObject = Json.encodeToJsonElement(DisplayPropertiesSerializer, this).jsonObject
+
+    companion object : JsonDataObjectFactory<DisplayProperties>() {
+        override fun fromJSON(jsonObject: JsonObject): DisplayProperties =
+            Json.decodeFromJsonElement(DisplayPropertiesSerializer, jsonObject)
+    }
 }
 
-object DisplayPropertiesSerializer: JsonDataObjectSerializer<DisplayProperties>(DisplayProperties.serializer())
+object DisplayPropertiesSerializer : JsonDataObjectSerializer<DisplayProperties>(DisplayProperties.serializer())
 
-object DisplayPropertiesListSerializer: KSerializer<List<DisplayProperties>> {
-  private val internalSerializer = ListSerializer(DisplayPropertiesSerializer)
-  override val descriptor: SerialDescriptor = internalSerializer.descriptor
-  override fun deserialize(decoder: Decoder) = internalSerializer.deserialize(decoder)
-  override fun serialize(encoder: Encoder, value: List<DisplayProperties>) = internalSerializer.serialize(encoder, value)
+object DisplayPropertiesListSerializer : KSerializer<List<DisplayProperties>> {
+    private val internalSerializer = ListSerializer(DisplayPropertiesSerializer)
+    override val descriptor: SerialDescriptor = internalSerializer.descriptor
+    override fun deserialize(decoder: Decoder) = internalSerializer.deserialize(decoder)
+    override fun serialize(encoder: Encoder, value: List<DisplayProperties>) =
+        internalSerializer.serialize(encoder, value)
 }

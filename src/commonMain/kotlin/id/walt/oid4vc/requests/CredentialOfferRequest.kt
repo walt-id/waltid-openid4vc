@@ -8,7 +8,7 @@ data class CredentialOfferRequest(
     val credentialOffer: CredentialOffer? = null,
     val credentialOfferUri: String? = null,
     override val customParameters: Map<String, List<String>> = mapOf()
-): HTTPDataObject() {
+) : HTTPDataObject() {
     override fun toHttpParameters(): Map<String, List<String>> {
         return buildMap {
             credentialOffer?.let { put("credential_offer", listOf(it.toJSONString())) }
@@ -16,7 +16,7 @@ data class CredentialOfferRequest(
         }
     }
 
-    companion object: HTTPDataObjectFactory<CredentialOfferRequest>() {
+    companion object : HTTPDataObjectFactory<CredentialOfferRequest>() {
         private val knownKeys = setOf("credential_offer", "credential_offer_uri")
         override fun fromHttpParameters(parameters: Map<String, List<String>>): CredentialOfferRequest {
             return CredentialOfferRequest(

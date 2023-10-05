@@ -16,12 +16,14 @@ data class PresentationSubmission(
     @SerialName("definition_id") val definitionId: String,
     @SerialName("descriptor_map") @Serializable(DescriptorMappingListSerializer::class) val descriptorMap: List<DescriptorMapping>,
     override val customParameters: Map<String, JsonElement> = mapOf()
-): JsonDataObject() {
+) : JsonDataObject() {
     override fun toJSON() = Json.encodeToJsonElement(PresentationSubmissionSerializer, this).jsonObject
 
-    companion object: JsonDataObjectFactory<PresentationSubmission>() {
-        override fun fromJSON(jsonObject: JsonObject) = Json.decodeFromJsonElement(PresentationSubmissionSerializer, jsonObject)
+    companion object : JsonDataObjectFactory<PresentationSubmission>() {
+        override fun fromJSON(jsonObject: JsonObject) =
+            Json.decodeFromJsonElement(PresentationSubmissionSerializer, jsonObject)
     }
 }
 
-object PresentationSubmissionSerializer: JsonDataObjectSerializer<PresentationSubmission>(PresentationSubmission.serializer())
+object PresentationSubmissionSerializer :
+    JsonDataObjectSerializer<PresentationSubmission>(PresentationSubmission.serializer())

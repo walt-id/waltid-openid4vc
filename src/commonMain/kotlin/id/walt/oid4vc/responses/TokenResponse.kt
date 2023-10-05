@@ -9,6 +9,7 @@ import id.walt.oid4vc.data.dif.PresentationSubmissionSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
+import kotlin.time.Duration
 
 @Serializable
 data class TokenResponse private constructor(
@@ -20,7 +21,7 @@ data class TokenResponse private constructor(
     @SerialName("vp_token") val vpToken: JsonElement? = null, // FIXME shouldn't this just be a String?
     val scope: String? = null,
     @SerialName("c_nonce") val cNonce: String? = null,
-    @SerialName("c_nonce_expires_in") val cNonceExpiresIn: Long? = null,
+    @SerialName("c_nonce_expires_in") val cNonceExpiresIn: Duration? = null,
     @SerialName("authorization_pending") val authorizationPending: Boolean? = null,
     val interval: Long? = null,
     @Serializable(PresentationSubmissionSerializer::class)
@@ -75,7 +76,7 @@ data class TokenResponse private constructor(
                 parameters["vp_token"]?.firstOrNull()?.let { Json.parseToJsonElement(it) },
                 parameters["scope"]?.firstOrNull(),
                 parameters["c_nonce"]?.firstOrNull(),
-                parameters["c_nonce_expires_in"]?.firstOrNull()?.toLong(),
+                parameters["c_nonce_expires_in"]?.firstOrNull()?.let { Duration.parse(it) },
                 parameters["authorization_pending"]?.firstOrNull()?.toBoolean(),
                 parameters["interval"]?.firstOrNull()?.toLong(),
                 parameters["presentation_submission"]?.firstOrNull()?.let { PresentationSubmission.fromJSONString(it) },

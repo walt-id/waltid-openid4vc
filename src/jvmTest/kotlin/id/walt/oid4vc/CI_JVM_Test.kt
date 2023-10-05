@@ -35,8 +35,8 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.util.*
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlin.time.Duration.Companion.minutes
 
 class CI_JVM_Test : AnnotationSpec() {
 
@@ -49,7 +49,10 @@ class CI_JVM_Test : AnnotationSpec() {
                     DisplayProperties(
                         "University Credential",
                         "en-US",
-                        LogoProperties("https://exampleuniversity.com/public/logo.png", "a square logo of a university"),
+                        LogoProperties(
+                            "https://exampleuniversity.com/public/logo.png",
+                            "a square logo of a university"
+                        ),
                         backgroundColor = "#12107c", textColor = "#FFFFFF"
                     )
                 ),
@@ -63,7 +66,10 @@ class CI_JVM_Test : AnnotationSpec() {
                                 valueType = "string",
                                 display = listOf(DisplayProperties("First Name"))
                             ).toJSON(),
-                            "lastName" to ClaimDescriptor(valueType = "string", display = listOf(DisplayProperties("Last Name"))).toJSON()
+                            "lastName" to ClaimDescriptor(
+                                valueType = "string",
+                                display = listOf(DisplayProperties("Last Name"))
+                            ).toJSON()
                         )
                     )
                 )
@@ -215,7 +221,8 @@ class CI_JVM_Test : AnnotationSpec() {
     @Test
     suspend fun testInvalidAuthorizationRequest() {
         // 0. get issuer metadata
-        val providerMetadata = ktorClient.get(ciTestProvider.getCIProviderMetadataUrl()).call.body<OpenIDProviderMetadata>()
+        val providerMetadata =
+            ktorClient.get(ciTestProvider.getCIProviderMetadataUrl()).call.body<OpenIDProviderMetadata>()
         providerMetadata.pushedAuthorizationRequestEndpoint shouldNotBe null
 
         // 1. send pushed authorization request with authorization details, containing info of credentials to be issued, receive session id
@@ -241,7 +248,8 @@ class CI_JVM_Test : AnnotationSpec() {
     @Test
     suspend fun testFullAuthCodeFlow() {
         println("// 0. get issuer metadata")
-        val providerMetadata = ktorClient.get(ciTestProvider.getCIProviderMetadataUrl()).call.body<OpenIDProviderMetadata>()
+        val providerMetadata =
+            ktorClient.get(ciTestProvider.getCIProviderMetadataUrl()).call.body<OpenIDProviderMetadata>()
         println("providerMetadata: $providerMetadata")
         providerMetadata.pushedAuthorizationRequestEndpoint shouldNotBe null
 
@@ -406,7 +414,8 @@ class CI_JVM_Test : AnnotationSpec() {
         batchResp.credentialResponses!![1].isDeferred shouldBe true
         batchResp.credentialResponses!![1].acceptanceToken shouldNotBe null
 
-        val batchCred1 = batchResp.credentialResponses!![0].credential!!.let { VerifiableCredential.fromString(it.jsonPrimitive.content) }
+        val batchCred1 =
+            batchResp.credentialResponses!![0].credential!!.let { VerifiableCredential.fromString(it.jsonPrimitive.content) }
         batchCred1.type.last() shouldBe "VerifiableId"
         Auditor.getService().verify(batchCred1, listOf(SignaturePolicy())).result shouldBe true
         println("batchCred1: $batchCred1")
@@ -430,7 +439,7 @@ class CI_JVM_Test : AnnotationSpec() {
         println("// as CI provider, initialize credential offer for user")
         val issuanceSession = ciTestProvider.initializeCredentialOffer(
             CredentialOffer.Builder(ciTestProvider.baseUrl).addOfferedCredential("VerifiableId"),
-            600, allowPreAuthorized = false
+            5.minutes, allowPreAuthorized = false
         )
         println("issuanceSession: $issuanceSession")
         issuanceSession.credentialOffer shouldNotBe null
@@ -449,7 +458,8 @@ class CI_JVM_Test : AnnotationSpec() {
         parsedOfferReq.credentialOffer!!.grants.keys shouldContainExactly setOf(GrantType.authorization_code.value)
 
         println("// get issuer metadata")
-        val providerMetadataUri = credentialWallet.getCIProviderMetadataUrl(parsedOfferReq.credentialOffer!!.credentialIssuer)
+        val providerMetadataUri =
+            credentialWallet.getCIProviderMetadataUrl(parsedOfferReq.credentialOffer!!.credentialIssuer)
         val providerMetadata = ktorClient.get(providerMetadataUri).call.body<OpenIDProviderMetadata>()
         println("providerMetadata: $providerMetadata")
 
@@ -487,7 +497,11 @@ class CI_JVM_Test : AnnotationSpec() {
 
         println("// token req")
         val tokenReq =
-            TokenRequest(GrantType.authorization_code, testCIClientConfig.clientID, code = location.parameters[ResponseType.code.name]!!)
+            TokenRequest(
+                GrantType.authorization_code,
+                testCIClientConfig.clientID,
+                code = location.parameters[ResponseType.code.name]!!
+            )
         println("tokenReq: $tokenReq")
 
         val tokenResp = ktorClient.submitForm(
@@ -537,7 +551,7 @@ class CI_JVM_Test : AnnotationSpec() {
         val issuanceSession = ciTestProvider.initializeCredentialOffer(
             CredentialOffer.Builder(ciTestProvider.baseUrl)
                 .addOfferedCredential(OfferedCredential.fromProviderMetadata(ciTestProvider.metadata.credentialsSupported!!.first())),
-            600, allowPreAuthorized = true, preAuthUserPin = "1234"
+            5.minutes, allowPreAuthorized = true, preAuthUserPin = "1234"
         )
         println("issuanceSession: $issuanceSession")
 
@@ -564,7 +578,8 @@ class CI_JVM_Test : AnnotationSpec() {
         parsedOfferReq.credentialOffer!!.grants[GrantType.pre_authorized_code.value]?.userPinRequired shouldBe true
 
         println("// get issuer metadata")
-        val providerMetadataUri = credentialWallet.getCIProviderMetadataUrl(parsedOfferReq.credentialOffer!!.credentialIssuer)
+        val providerMetadataUri =
+            credentialWallet.getCIProviderMetadataUrl(parsedOfferReq.credentialOffer!!.credentialIssuer)
         val providerMetadata = ktorClient.get(providerMetadataUri).call.body<OpenIDProviderMetadata>()
         println("providerMetadata: $providerMetadata")
 
@@ -650,7 +665,8 @@ class CI_JVM_Test : AnnotationSpec() {
     @Test
     suspend fun testFullAuthImplicitFlow() {
         println("// 0. get issuer metadata")
-        val providerMetadata = ktorClient.get(ciTestProvider.getCIProviderMetadataUrl()).call.body<OpenIDProviderMetadata>()
+        val providerMetadata =
+            ktorClient.get(ciTestProvider.getCIProviderMetadataUrl()).call.body<OpenIDProviderMetadata>()
         println("providerMetadata: $providerMetadata")
 
         println("// 1. send pushed authorization request with authorization details, containing info of credentials to be issued, receive session id")
@@ -728,14 +744,16 @@ class CI_JVM_Test : AnnotationSpec() {
         Auditor.getService().verify(credential, listOf(SignaturePolicy())).result shouldBe true
     }
 
-    val issuerPortalRequest = "openid-credential-offer://issuer.portal.walt.id/?credential_offer=%7B%22credential_issuer%22%3A%22https%3A%2F%2Fissuer.portal.walt.id%22%2C%22credentials%22%3A%5B%7B%22format%22%3A%22jwt_vc_json%22%2C%22types%22%3A%5B%22VerifiableCredential%22%2C%22OpenBadgeCredential%22%5D%2C%22credential_definition%22%3A%7B%22%40context%22%3A%5B%22https%3A%2F%2Fwww.w3.org%2F2018%2Fcredentials%2Fv1%22%2C%22https%3A%2F%2Fw3c-ccg.github.io%2Fvc-ed%2Fplugfest-1-2022%2Fjff-vc-edu-plugfest-1-context.json%22%2C%22https%3A%2F%2Fw3id.org%2Fsecurity%2Fsuites%2Fed25519-2020%2Fv1%22%5D%2C%22types%22%3A%5B%22VerifiableCredential%22%2C%22OpenBadgeCredential%22%5D%7D%7D%5D%2C%22grants%22%3A%7B%22authorization_code%22%3A%7B%22issuer_state%22%3A%22c7228046-1a8e-4e27-a7b1-cd6479e1455f%22%7D%2C%22urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Apre-authorized_code%22%3A%7B%22pre-authorized_code%22%3A%22eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiJjNzIyODA0Ni0xYThlLTRlMjctYTdiMS1jZDY0NzllMTQ1NWYiLCJpc3MiOiJodHRwczovL2lzc3Vlci5wb3J0YWwud2FsdC5pZCIsImF1ZCI6IlRPS0VOIn0.On2_7P4vr5caTHKbWv2i0a604HQ-FaiuVZHH9kzEKK7mOdVHtNHoAZADpDJtowNCkhMQxruLbnqB7WvRQzufCg%22%2C%22user_pin_required%22%3Afalse%7D%7D%7D"
+    val issuerPortalRequest =
+        "openid-credential-offer://issuer.portal.walt.id/?credential_offer=%7B%22credential_issuer%22%3A%22https%3A%2F%2Fissuer.portal.walt.id%22%2C%22credentials%22%3A%5B%7B%22format%22%3A%22jwt_vc_json%22%2C%22types%22%3A%5B%22VerifiableCredential%22%2C%22OpenBadgeCredential%22%5D%2C%22credential_definition%22%3A%7B%22%40context%22%3A%5B%22https%3A%2F%2Fwww.w3.org%2F2018%2Fcredentials%2Fv1%22%2C%22https%3A%2F%2Fw3c-ccg.github.io%2Fvc-ed%2Fplugfest-1-2022%2Fjff-vc-edu-plugfest-1-context.json%22%2C%22https%3A%2F%2Fw3id.org%2Fsecurity%2Fsuites%2Fed25519-2020%2Fv1%22%5D%2C%22types%22%3A%5B%22VerifiableCredential%22%2C%22OpenBadgeCredential%22%5D%7D%7D%5D%2C%22grants%22%3A%7B%22authorization_code%22%3A%7B%22issuer_state%22%3A%22c7228046-1a8e-4e27-a7b1-cd6479e1455f%22%7D%2C%22urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Apre-authorized_code%22%3A%7B%22pre-authorized_code%22%3A%22eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiJjNzIyODA0Ni0xYThlLTRlMjctYTdiMS1jZDY0NzllMTQ1NWYiLCJpc3MiOiJodHRwczovL2lzc3Vlci5wb3J0YWwud2FsdC5pZCIsImF1ZCI6IlRPS0VOIn0.On2_7P4vr5caTHKbWv2i0a604HQ-FaiuVZHH9kzEKK7mOdVHtNHoAZADpDJtowNCkhMQxruLbnqB7WvRQzufCg%22%2C%22user_pin_required%22%3Afalse%7D%7D%7D"
 
     //@Test
     suspend fun testIssuerPortalRequest() {
         val credOfferReq = CredentialOfferRequest.fromHttpQueryString(Url(issuerPortalRequest).encodedQuery)
         credOfferReq.credentialOffer?.credentialIssuer shouldNotBe null
         println("// get issuer metadata")
-        val providerMetadataUri = credentialWallet.getCIProviderMetadataUrl(credOfferReq.credentialOffer!!.credentialIssuer)
+        val providerMetadataUri =
+            credentialWallet.getCIProviderMetadataUrl(credOfferReq.credentialOffer!!.credentialIssuer)
         val providerMetadata = ktorClient.get(providerMetadataUri).call.body<OpenIDProviderMetadata>()
         println("providerMetadata: $providerMetadata")
         providerMetadata.authorizationEndpoint shouldNotBe null
@@ -780,15 +798,18 @@ class CI_JVM_Test : AnnotationSpec() {
         println(credentialResp.credential!!.let { VerifiableCredential.fromString(it.jsonPrimitive.content) }.toJson())
     }
 
-    val mattrCredentialOffer = "openid-credential-offer://?credential_offer=%7B%22credential_issuer%22%3A%22https%3A%2F%2Flaunchpad.vii.electron.mattrlabs.io%22%2C%22credentials%22%3A%5B%7B%22format%22%3A%22jwt_vc_json%22%2C%22types%22%3A%5B%22OpenBadgeCredential%22%5D%7D%5D%2C%22grants%22%3A%7B%22urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Apre-authorized_code%22%3A%7B%22pre-authorized_code%22%3A%22VphetImmqY-iPICjhRzGPk-QV7-TeT0wVD-sTh9rZ9k%22%7D%7D%7D"
+    val mattrCredentialOffer =
+        "openid-credential-offer://?credential_offer=%7B%22credential_issuer%22%3A%22https%3A%2F%2Flaunchpad.vii.electron.mattrlabs.io%22%2C%22credentials%22%3A%5B%7B%22format%22%3A%22jwt_vc_json%22%2C%22types%22%3A%5B%22OpenBadgeCredential%22%5D%7D%5D%2C%22grants%22%3A%7B%22urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Apre-authorized_code%22%3A%7B%22pre-authorized_code%22%3A%22VphetImmqY-iPICjhRzGPk-QV7-TeT0wVD-sTh9rZ9k%22%7D%7D%7D"
 
     //@Test
     suspend fun testMattrCredentialOffer() {
         val credOfferReq = CredentialOfferRequest.fromHttpQueryString(Url(mattrCredentialOffer).encodedQuery)
         credOfferReq.credentialOffer?.credentialIssuer shouldNotBe null
         println("// get issuer metadata")
-        val providerMetadataUri = credentialWallet.getCIProviderMetadataUrl(credOfferReq.credentialOffer!!.credentialIssuer)
-        val providerMetadata = ktorClient.get(providerMetadataUri).call.body<JsonObject>().let { OpenIDProviderMetadata.fromJSON(it) }
+        val providerMetadataUri =
+            credentialWallet.getCIProviderMetadataUrl(credOfferReq.credentialOffer!!.credentialIssuer)
+        val providerMetadata =
+            ktorClient.get(providerMetadataUri).call.body<JsonObject>().let { OpenIDProviderMetadata.fromJSON(it) }
         println("providerMetadata: $providerMetadata")
         providerMetadata.authorizationEndpoint shouldNotBe null
         println("// resolve offered credentials")
@@ -816,8 +837,10 @@ class CI_JVM_Test : AnnotationSpec() {
         // make credential request
         val credReq = CredentialRequest.forOfferedCredential(
             offeredCredentials.first(),
-            credentialWallet.generateDidProof(credentialWallet.TEST_DID, credOfferReq.credentialOfferUri
-                ?: credOfferReq.credentialOffer!!.credentialIssuer, tokenResp.cNonce)
+            credentialWallet.generateDidProof(
+                credentialWallet.TEST_DID, credOfferReq.credentialOfferUri
+                    ?: credOfferReq.credentialOffer!!.credentialIssuer, tokenResp.cNonce
+            )
         )
         println("credReq: $credReq")
 
@@ -833,14 +856,17 @@ class CI_JVM_Test : AnnotationSpec() {
         println(credentialResp.credential!!.let { VerifiableCredential.fromString(it.jsonPrimitive.content) }.toJson())
     }
 
-    val spheronCredOffer = "openid-credential-offer://?credential_offer=%7B%22grants%22%3A%7B%22urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Apre-authorized_code%22%3A%7B%22pre-authorized_code%22%3A%221P8XydcKW1Gy5y7e1u25mM%22%2C%22user_pin_required%22%3Afalse%7D%7D%2C%22credentials%22%3A%5B%22OpenBadgeCredential%22%5D%2C%22credential_issuer%22%3A%22https%3A%2F%2Fssi.sphereon.com%2Fpf3%22%7D"
+    val spheronCredOffer =
+        "openid-credential-offer://?credential_offer=%7B%22grants%22%3A%7B%22urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Apre-authorized_code%22%3A%7B%22pre-authorized_code%22%3A%221P8XydcKW1Gy5y7e1u25mM%22%2C%22user_pin_required%22%3Afalse%7D%7D%2C%22credentials%22%3A%5B%22OpenBadgeCredential%22%5D%2C%22credential_issuer%22%3A%22https%3A%2F%2Fssi.sphereon.com%2Fpf3%22%7D"
 
     //@Test
     suspend fun parseSpheronCredOffer() {
         val credOfferReq = CredentialOfferRequest.fromHttpQueryString(Url(spheronCredOffer).encodedQuery)
         credOfferReq.credentialOffer shouldNotBe null
-        val providerMetadataUri = credentialWallet.getCIProviderMetadataUrl(credOfferReq.credentialOffer!!.credentialIssuer)
-        val providerMetadata = ktorClient.get(providerMetadataUri).call.body<JsonObject>().let { OpenIDProviderMetadata.fromJSON(it) }
+        val providerMetadataUri =
+            credentialWallet.getCIProviderMetadataUrl(credOfferReq.credentialOffer!!.credentialIssuer)
+        val providerMetadata =
+            ktorClient.get(providerMetadataUri).call.body<JsonObject>().let { OpenIDProviderMetadata.fromJSON(it) }
         println("providerMetadata: $providerMetadata")
         providerMetadata.tokenEndpoint shouldNotBe null
         providerMetadata.credentialEndpoint shouldNotBe null
@@ -866,8 +892,10 @@ class CI_JVM_Test : AnnotationSpec() {
         // make credential request
         val credReq = CredentialRequest.forOfferedCredential(
             offeredCredentials.first(),
-            credentialWallet.generateDidProof(credentialWallet.TEST_DID, credOfferReq.credentialOfferUri
-                ?: credOfferReq.credentialOffer!!.credentialIssuer, tokenResp.cNonce)
+            credentialWallet.generateDidProof(
+                credentialWallet.TEST_DID, credOfferReq.credentialOfferUri
+                    ?: credOfferReq.credentialOffer!!.credentialIssuer, tokenResp.cNonce
+            )
         )
         println("credReq: $credReq")
 

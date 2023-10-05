@@ -19,17 +19,19 @@ data class InputDescriptorField(
     val filter: JsonObject? = null,
     val optional: Boolean? = null,
     override val customParameters: Map<String, JsonElement> = mapOf()
-): JsonDataObject() {
+) : JsonDataObject() {
     override fun toJSON(): JsonObject {
         TODO("Not yet implemented")
     }
 }
 
-object InputDescriptorFieldSerializer: JsonDataObjectSerializer<InputDescriptorField>(InputDescriptorField.serializer())
+object InputDescriptorFieldSerializer :
+    JsonDataObjectSerializer<InputDescriptorField>(InputDescriptorField.serializer())
 
-object InputDescriptorFieldListSerializer: KSerializer<List<InputDescriptorField>> {
+object InputDescriptorFieldListSerializer : KSerializer<List<InputDescriptorField>> {
     private val internalSerializer = ListSerializer(InputDescriptorFieldSerializer)
     override val descriptor = internalSerializer.descriptor
     override fun deserialize(decoder: Decoder) = internalSerializer.deserialize(decoder)
-    override fun serialize(encoder: Encoder, value: List<InputDescriptorField>) = internalSerializer.serialize(encoder, value)
+    override fun serialize(encoder: Encoder, value: List<InputDescriptorField>) =
+        internalSerializer.serialize(encoder, value)
 }

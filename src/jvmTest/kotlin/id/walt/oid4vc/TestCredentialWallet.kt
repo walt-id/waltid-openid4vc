@@ -59,16 +59,24 @@ class TestCredentialWallet(
     override fun verifyTokenSignature(target: TokenTarget, token: String) =
         JwtService.getService().verify(token).verified
 
-    override fun generatePresentation(presentationDefinition: PresentationDefinition, nonce: String?): PresentationResult {
+    override fun generatePresentation(
+        presentationDefinition: PresentationDefinition,
+        nonce: String?
+    ): PresentationResult {
         // find credential(s) matching the presentation definition
         // for this test wallet implementation, present all credentials in the wallet
-        val filterString = presentationDefinition.inputDescriptors.flatMap { it.constraints?.fields ?: listOf() }.firstOrNull { field -> field.path.any { it.contains("type") } }?.filter?.jsonObject.toString()
+        val filterString = presentationDefinition.inputDescriptors.flatMap { it.constraints?.fields ?: listOf() }
+            .firstOrNull { field -> field.path.any { it.contains("type") } }?.filter?.jsonObject.toString()
         val presentationJwtStr = Custodian.getService()
-            .createPresentation(Custodian.getService().listCredentials().filter { filterString.contains(it.type.last()) }.map { PresentableCredential(
-                it,
-                selectiveDisclosure = null,
-                discloseAll = false
-            ) }, TEST_DID, challenge = nonce)
+            .createPresentation(
+                Custodian.getService().listCredentials().filter { filterString.contains(it.type.last()) }.map {
+                    PresentableCredential(
+                        it,
+                        selectiveDisclosure = null,
+                        discloseAll = false
+                    )
+                }, TEST_DID, challenge = nonce
+            )
 
         println("================")
         println("PRESENTATION IS: $presentationJwtStr")

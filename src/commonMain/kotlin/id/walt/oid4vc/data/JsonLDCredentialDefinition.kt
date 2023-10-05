@@ -6,6 +6,6 @@ import kotlinx.serialization.json.JsonElement
 
 @Serializable
 data class JsonLDCredentialDefinition(
-  @SerialName("@context") val context: List<JsonElement>? = null,
-  val types: List<String>? = null,
+    @SerialName("@context") val context: List<JsonElement>? = null,
+    val types: List<String>? = null,
 )

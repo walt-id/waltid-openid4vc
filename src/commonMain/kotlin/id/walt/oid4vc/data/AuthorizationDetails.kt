@@ -27,33 +27,37 @@ import kotlinx.serialization.json.jsonObject
  */
 @Serializable
 data class AuthorizationDetails(
-  @EncodeDefault val type: String = OPENID_CREDENTIAL_AUTHORIZATION_TYPE,
-  val format: CredentialFormat? = null,
-  val types: List<String>? = null,
-  @Serializable(ClaimDescriptorMapSerializer::class) val credentialSubject: Map<String, ClaimDescriptor>? = null,
-  @SerialName("doctype") val docType: String? = null,
-  @Serializable(ClaimDescriptorNamespacedMapSerializer::class) val claims: Map<String, Map<String, ClaimDescriptor>>? = null,
-  @SerialName("credential_definition") val credentialDefinition: JsonLDCredentialDefinition? = null,
-  override val customParameters: Map<String, JsonElement> = mapOf()
-): JsonDataObject() {
-  override fun toJSON() = Json.encodeToJsonElement(AuthorizationDetailsSerializer, this).jsonObject
+    @EncodeDefault val type: String = OPENID_CREDENTIAL_AUTHORIZATION_TYPE,
+    val format: CredentialFormat? = null,
+    val types: List<String>? = null,
+    @Serializable(ClaimDescriptorMapSerializer::class) val credentialSubject: Map<String, ClaimDescriptor>? = null,
+    @SerialName("doctype") val docType: String? = null,
+    @Serializable(ClaimDescriptorNamespacedMapSerializer::class) val claims: Map<String, Map<String, ClaimDescriptor>>? = null,
+    @SerialName("credential_definition") val credentialDefinition: JsonLDCredentialDefinition? = null,
+    override val customParameters: Map<String, JsonElement> = mapOf()
+) : JsonDataObject() {
+    override fun toJSON() = Json.encodeToJsonElement(AuthorizationDetailsSerializer, this).jsonObject
 
-  companion object: JsonDataObjectFactory<AuthorizationDetails>() {
-    override fun fromJSON(jsonObject: JsonObject): AuthorizationDetails = Json.decodeFromJsonElement(AuthorizationDetailsSerializer, jsonObject)
-    fun fromOfferedCredential(offeredCredential: OfferedCredential) = AuthorizationDetails(
-      OPENID_CREDENTIAL_AUTHORIZATION_TYPE,
-      offeredCredential.format, offeredCredential.types, null,
-      offeredCredential.docType, null,
-      offeredCredential.credentialDefinition, offeredCredential.customParameters
-    )
-  }
+    companion object : JsonDataObjectFactory<AuthorizationDetails>() {
+        override fun fromJSON(jsonObject: JsonObject): AuthorizationDetails =
+            Json.decodeFromJsonElement(AuthorizationDetailsSerializer, jsonObject)
+
+        fun fromOfferedCredential(offeredCredential: OfferedCredential) = AuthorizationDetails(
+            OPENID_CREDENTIAL_AUTHORIZATION_TYPE,
+            offeredCredential.format, offeredCredential.types, null,
+            offeredCredential.docType, null,
+            offeredCredential.credentialDefinition, offeredCredential.customParameters
+        )
+    }
 }
 
-object AuthorizationDetailsSerializer: JsonDataObjectSerializer<AuthorizationDetails>(AuthorizationDetails.serializer())
+object AuthorizationDetailsSerializer :
+    JsonDataObjectSerializer<AuthorizationDetails>(AuthorizationDetails.serializer())
 
-object AuthorizationDetailsListSerializer: KSerializer<List<AuthorizationDetails>> {
-  private val internalSerializer = ListSerializer(AuthorizationDetailsSerializer)
-  override val descriptor: SerialDescriptor = internalSerializer.descriptor
-  override fun deserialize(decoder: Decoder): List<AuthorizationDetails> = internalSerializer.deserialize(decoder)
-  override fun serialize(encoder: Encoder, value: List<AuthorizationDetails>) = internalSerializer.serialize(encoder, value)
+object AuthorizationDetailsListSerializer : KSerializer<List<AuthorizationDetails>> {
+    private val internalSerializer = ListSerializer(AuthorizationDetailsSerializer)
+    override val descriptor: SerialDescriptor = internalSerializer.descriptor
+    override fun deserialize(decoder: Decoder): List<AuthorizationDetails> = internalSerializer.deserialize(decoder)
+    override fun serialize(encoder: Encoder, value: List<AuthorizationDetails>) =
+        internalSerializer.serialize(encoder, value)
 }

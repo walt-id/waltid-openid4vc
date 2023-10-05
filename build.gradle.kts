@@ -1,12 +1,10 @@
-import org.apache.tools.ant.util.Base64Converter
-import org.jetbrains.kotlin.utils.addToStdlib.cast
-import org.jetbrains.kotlin.utils.addToStdlib.castAll
-
 plugins {
-    kotlin("multiplatform") version "1.8.21"
-    id("dev.petuska.npm.publish") version "3.3.1"
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.8.21"
+    kotlin("multiplatform") version "1.9.10"
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.10"
+    id("dev.petuska.npm.publish") version "3.4.1"
     `maven-publish`
+
+    id("com.github.ben-manes.versions") version "0.48.0"
 }
 
 group = "id.walt"
@@ -66,28 +64,25 @@ kotlin {
         isMingwX64 -> mingwX64("native")
         else -> throw GradleException("Host OS is not supported in Kotlin/Native.")
     }
-    val kryptoVersion = "4.0.1"
-    val ktor_version = "2.3.3"
+    val ktor_version = "2.3.4"
 
 
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-properties:1.4.1")
-                implementation("com.soywiz.korlibs.krypto:krypto:$kryptoVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.1")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
                 implementation("io.ktor:ktor-http:$ktor_version")
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
-                implementation("id.walt:waltid-sd-jwt:1.2306191408.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.1")
+                implementation("id.walt:waltid-sd-jwt:1.2309211114.0")
             }
         }
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation("io.kotest:kotest-assertions-core:5.5.5")
+                implementation("io.kotest:kotest-assertions-core:5.7.2")
 
-                implementation("io.kotest:kotest-assertions-json:5.5.5")
+                implementation("io.kotest:kotest-assertions-json:5.7.2")
             }
         }
         val jvmMain by getting {
@@ -96,11 +91,11 @@ kotlin {
         }
         val jvmTest by getting {
             dependencies {
-                implementation("io.mockk:mockk:1.13.2")
+                //implementation("io.mockk:mockk:1.13.2")
 
-                implementation("io.kotest:kotest-runner-junit5:5.5.5")
-                implementation("io.kotest:kotest-assertions-core:5.5.5")
-                implementation("io.kotest:kotest-assertions-json:5.5.5")
+                implementation("io.kotest:kotest-runner-junit5:5.7.2")
+                implementation("io.kotest:kotest-assertions-core:5.7.2")
+                implementation("io.kotest:kotest-assertions-json:5.7.2")
 
                 implementation("id.walt.servicematrix:WaltID-ServiceMatrix:1.1.3")
                 implementation("id.walt:waltid-ssikit:1.JWTPRESENT")

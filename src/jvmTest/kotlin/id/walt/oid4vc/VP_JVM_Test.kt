@@ -3,7 +3,10 @@ package id.walt.oid4vc
 import id.walt.auditor.Auditor
 import id.walt.auditor.policies.SignaturePolicy
 import id.walt.core.crypto.utils.JwsUtils.decodeJws
-import id.walt.oid4vc.data.*
+import id.walt.oid4vc.data.ClientIdScheme
+import id.walt.oid4vc.data.OpenIDClientMetadata
+import id.walt.oid4vc.data.ResponseMode
+import id.walt.oid4vc.data.ResponseType
 import id.walt.oid4vc.data.dif.*
 import id.walt.oid4vc.providers.SIOPProviderConfig
 import id.walt.oid4vc.requests.AuthorizationRequest
@@ -27,6 +30,7 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.util.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
+import kotlin.time.Duration.Companion.minutes
 
 class VP_JVM_Test : AnnotationSpec() {
 
@@ -125,7 +129,8 @@ class VP_JVM_Test : AnnotationSpec() {
 
         // vpToken is NOT a string, but JSON ELEMENT
         // this will break without .content(): (if JsonPrimitive and not JsonArray!)
-        Auditor.getService().verify(tokenResponse.vpToken!!.jsonPrimitive.content, listOf(SignaturePolicy())).result shouldBe true
+        Auditor.getService()
+            .verify(tokenResponse.vpToken!!.jsonPrimitive.content, listOf(SignaturePolicy())).result shouldBe true
     }
 
     //@Test
@@ -138,7 +143,7 @@ class VP_JVM_Test : AnnotationSpec() {
 
         val mattrLaunchpadUrl = mattrLaunchpadResponse["authorizeRequestUri"]!!.jsonPrimitive.content
 
-         /*-H 'Referer: https://launchpad.mattrlabs.com/credential/OpenBadgeCredential?name=Example+University+Degree&description=JFF+Plugfest+3+OpenBadge+Credential&issuerIconUrl=https%3A%2F%2Fw3c-ccg.github.io%2Fvc-ed%2Fplugfest-1-2022%2Fimages%2FJFF_LogoLockup.png&issuerLogoUrl=undefined&backgroundColor=%23464c49&watermarkImageUrl=undefined&issuerName=Example+University' -H 'Content-Type: application/json'-H 'TE: trailers' *///--data-raw '{"types":["OpenBadgeCredential"]}'
+        /*-H 'Referer: https://launchpad.mattrlabs.com/credential/OpenBadgeCredential?name=Example+University+Degree&description=JFF+Plugfest+3+OpenBadge+Credential&issuerIconUrl=https%3A%2F%2Fw3c-ccg.github.io%2Fvc-ed%2Fplugfest-1-2022%2Fimages%2FJFF_LogoLockup.png&issuerLogoUrl=undefined&backgroundColor=%23464c49&watermarkImageUrl=undefined&issuerName=Example+University' -H 'Content-Type: application/json'-H 'TE: trailers' *///--data-raw '{"types":["OpenBadgeCredential"]}'
 
 
         // parse verification request (QR code)
@@ -159,7 +164,7 @@ class VP_JVM_Test : AnnotationSpec() {
         presentationDefinition.inputDescriptors[0].constraints?.fields?.first()?.path?.first() shouldBe "$.type"
         presentationDefinition.inputDescriptors[0].constraints?.fields?.first()?.filter?.get("pattern")?.jsonPrimitive?.content shouldBe "OpenBadgeCredential"
 
-        val siopSession = testWallet.initializeAuthorization(authReq, 600)
+        val siopSession = testWallet.initializeAuthorization(authReq, 5.minutes)
         siopSession.authorizationRequest?.presentationDefinition shouldNotBe null
         val tokenResponse = testWallet.processImplicitFlowAuthorization(siopSession.authorizationRequest!!)
         println("tokenResponse vpToken: ${tokenResponse.vpToken}")
@@ -168,7 +173,8 @@ class VP_JVM_Test : AnnotationSpec() {
 
         println("Got token response: $tokenResponse")
 
-        val debugPresentingPresentationSubmission = tokenResponse.toHttpParameters()["presentation_submission"]!!.first()
+        val debugPresentingPresentationSubmission =
+            tokenResponse.toHttpParameters()["presentation_submission"]!!.first()
         val decoded = Json.parseToJsonElement(debugPresentingPresentationSubmission).jsonObject
         val encoded = Json { prettyPrint = true }.encodeToString(decoded)
         println(encoded)
@@ -195,7 +201,8 @@ class VP_JVM_Test : AnnotationSpec() {
     //@Test
     suspend fun testUniresolverVerificationRequest() {
 
-        val uniresUrl = "openid4vp://authorize?response_type=vp_token&presentation_definition={\"id\":\"OpenBadgeCredential\",\"input_descriptors\":[{\"id\":\"OpenBadge Credential\",\"format\":{\"jwt_vc\":{\"proof_type\":[\"ES256\",\"ES256\",\"ES256K\",\"PS256\"]},\"jwt_vp\":{\"proof_type\":[\"ES256\",\"ES256\",\"ES256K\",\"PS256\"]},\"ldp_vc\":{\"proof_type\":[\"Ed25519Signature2018\",\"Ed25519Signature2020\",\"JsonWebSignature2020\",\"EcdsaSecp256k1Signature2019\"]},\"ldp_vp\":{\"proof_type\":[\"Ed25519Signature2018\",\"Ed25519Signature2020\",\"JsonWebSignature2020\",\"EcdsaSecp256k1Signature2019\"]}},\"constraints\":{\"fields\":[{\"path\":[\"\$.type\"],\"optional\":false}]}}]}&client_id=https://oidc4vp.univerifier.io/1.0/authorization/direct_post&response_mode=direct_post&response_uri=https://oidc4vp.univerifier.io/1.0/authorization/direct_post&state=DUoqgmKcmoPsUuURKNJV&nonce=d292a622-82ec-4608-a873-356deae18bee"
+        val uniresUrl =
+            "openid4vp://authorize?response_type=vp_token&presentation_definition={\"id\":\"OpenBadgeCredential\",\"input_descriptors\":[{\"id\":\"OpenBadge Credential\",\"format\":{\"jwt_vc\":{\"proof_type\":[\"ES256\",\"ES256\",\"ES256K\",\"PS256\"]},\"jwt_vp\":{\"proof_type\":[\"ES256\",\"ES256\",\"ES256K\",\"PS256\"]},\"ldp_vc\":{\"proof_type\":[\"Ed25519Signature2018\",\"Ed25519Signature2020\",\"JsonWebSignature2020\",\"EcdsaSecp256k1Signature2019\"]},\"ldp_vp\":{\"proof_type\":[\"Ed25519Signature2018\",\"Ed25519Signature2020\",\"JsonWebSignature2020\",\"EcdsaSecp256k1Signature2019\"]}},\"constraints\":{\"fields\":[{\"path\":[\"\$.type\"],\"optional\":false}]}}]}&client_id=https://oidc4vp.univerifier.io/1.0/authorization/direct_post&response_mode=direct_post&response_uri=https://oidc4vp.univerifier.io/1.0/authorization/direct_post&state=DUoqgmKcmoPsUuURKNJV&nonce=d292a622-82ec-4608-a873-356deae18bee"
         /*-H 'Referer: https://launchpad.mattrlabs.com/credential/OpenBadgeCredential?name=Example+University+Degree&description=JFF+Plugfest+3+OpenBadge+Credential&issuerIconUrl=https%3A%2F%2Fw3c-ccg.github.io%2Fvc-ed%2Fplugfest-1-2022%2Fimages%2FJFF_LogoLockup.png&issuerLogoUrl=undefined&backgroundColor=%23464c49&watermarkImageUrl=undefined&issuerName=Example+University' -H 'Content-Type: application/json'-H 'TE: trailers' *///--data-raw '{"types":["OpenBadgeCredential"]}'
 
 
@@ -208,7 +215,7 @@ class VP_JVM_Test : AnnotationSpec() {
         //authReq.presentationDefinition shouldBe null
         //authReq.presentationDefinitionUri shouldNotBe null
 
-        val siopSession = testWallet.initializeAuthorization(authReq, 600)
+        val siopSession = testWallet.initializeAuthorization(authReq, 5.minutes)
         siopSession.authorizationRequest?.presentationDefinition shouldNotBe null
         val tokenResponse = testWallet.processImplicitFlowAuthorization(siopSession.authorizationRequest!!)
         println("tokenResponse vpToken: ${tokenResponse.vpToken}")
@@ -217,7 +224,8 @@ class VP_JVM_Test : AnnotationSpec() {
 
         println("Got token response: $tokenResponse")
 
-        val debugPresentingPresentationSubmission = tokenResponse.toHttpParameters()["presentation_submission"]!!.first()
+        val debugPresentingPresentationSubmission =
+            tokenResponse.toHttpParameters()["presentation_submission"]!!.first()
         val decoded = Json.parseToJsonElement(debugPresentingPresentationSubmission).jsonObject
         val encoded = Json { prettyPrint = true }.encodeToString(decoded)
         println(encoded)
@@ -241,7 +249,6 @@ class VP_JVM_Test : AnnotationSpec() {
             client_id=https%3A%2F%2Fclient.example.org%2Fcb
             &request_uri=https%3A%2F%2Fclient.example.org%2F567545564
          */
-
 
 
         /*
@@ -349,16 +356,16 @@ class VP_JVM_Test : AnnotationSpec() {
         }
          """.trimIndent()
 
-        val sphereonVerifierResponse = http.post("https://ssi.sphereon.com/agent/webapp/definitions/sphereon/auth-requests") {
-            contentType(ContentType.Application.Json)
-            bearerAuth("demo")
-            setBody("""{}""")
-        }.body<JsonObject>()
+        val sphereonVerifierResponse =
+            http.post("https://ssi.sphereon.com/agent/webapp/definitions/sphereon/auth-requests") {
+                contentType(ContentType.Application.Json)
+                bearerAuth("demo")
+                setBody("""{}""")
+            }.body<JsonObject>()
 
         val sphereonAuthReqUrl = sphereonVerifierResponse["authRequestURI"]!!.jsonPrimitive.content
 // The Verifier may send an Authorization Request as Request Object by value or by reference as defined in JWT-Secured Authorization Request (JAR) [RFC9101].
         // parse verification request (QR code)
-
 
 
         val urlParams = parseQueryString(Url(sphereonAuthReqUrl).encodedQuery).also {
@@ -376,7 +383,7 @@ class VP_JVM_Test : AnnotationSpec() {
 
             AuthorizationRequest(
                 responseType = requestPayload["response_type"]!!.jsonPrimitive.content,
-                clientId =  requestPayload["client_id"]!!.jsonPrimitive.content,
+                clientId = requestPayload["client_id"]!!.jsonPrimitive.content,
                 responseMode = requestPayload["response_mode"]!!.jsonPrimitive.content.let {
                     when (it) {
                         "post" -> ResponseMode.direct_post
@@ -393,15 +400,30 @@ class VP_JVM_Test : AnnotationSpec() {
                 issuerState = requestPayload["issuer_state"]?.jsonPrimitive?.contentOrNull,
                 requestUri = null,
                 presentationDefinition =
-                (requestPayload["presentation_definition"]?.jsonPrimitive?.contentOrNull)?.let { PresentationDefinition.fromJSONString(it) }
-                    ?: (PresentationDefinition.fromJSON(requestPayload["claims"]?.jsonObject?.get("vp_token")?.jsonObject?.get("presentation_definition")?.jsonObject
-                        ?: throw IllegalArgumentException("Could not find a presentation_definition!"))),
+                (requestPayload["presentation_definition"]?.jsonPrimitive?.contentOrNull)?.let {
+                    PresentationDefinition.fromJSONString(
+                        it
+                    )
+                }
+                    ?: (PresentationDefinition.fromJSON(
+                        requestPayload["claims"]?.jsonObject?.get("vp_token")?.jsonObject?.get("presentation_definition")?.jsonObject
+                            ?: throw IllegalArgumentException("Could not find a presentation_definition!")
+                    )),
                 presentationDefinitionUri = requestPayload["presentation_definition_uri"]?.jsonPrimitive?.contentOrNull,
-                clientIdScheme = requestPayload["client_id_scheme"]?.jsonPrimitive?.contentOrNull?.let { ClientIdScheme.fromValue(it) },
-                clientMetadata = requestPayload["client_metadata"]?.jsonPrimitive?.contentOrNull?.let { OpenIDClientMetadata.fromJSONString(it) },
-                clientMetadataUri =   requestPayload["client_metadata_uri"]?.jsonPrimitive?.contentOrNull,
+                clientIdScheme = requestPayload["client_id_scheme"]?.jsonPrimitive?.contentOrNull?.let {
+                    ClientIdScheme.fromValue(
+                        it
+                    )
+                },
+                clientMetadata = requestPayload["client_metadata"]?.jsonPrimitive?.contentOrNull?.let {
+                    OpenIDClientMetadata.fromJSONString(
+                        it
+                    )
+                },
+                clientMetadataUri = requestPayload["client_metadata_uri"]?.jsonPrimitive?.contentOrNull,
                 nonce = requestPayload["nonce"]?.jsonPrimitive?.contentOrNull,
-                responseUri =   requestPayload["response_uri"]?.jsonPrimitive?.contentOrNull ?: requestPayload["redirect_uri"]?.jsonPrimitive?.contentOrNull,
+                responseUri = requestPayload["response_uri"]?.jsonPrimitive?.contentOrNull
+                    ?: requestPayload["redirect_uri"]?.jsonPrimitive?.contentOrNull,
                 //customrequestPayload = requestPayload.filterKeys { !id.walt.oid4vc.requests.AuthorizationRequest.Companion.knownKeys.contains(it) }
             )
         } else AuthorizationRequest.fromHttpQueryString(Url(sphereonAuthReqUrl).encodedQuery)
@@ -423,7 +445,7 @@ class VP_JVM_Test : AnnotationSpec() {
         presentationDefinition.inputDescriptors[0].constraints?.fields?.first()?.path?.first() shouldBe "$.type"
         presentationDefinition.inputDescriptors[0].constraints?.fields?.first()?.filter?.get("pattern")?.jsonPrimitive?.content shouldBe "OpenBadgeCredential"
 
-        val siopSession = testWallet.initializeAuthorization(authReq, 600)
+        val siopSession = testWallet.initializeAuthorization(authReq, 5.minutes)
         siopSession.authorizationRequest?.presentationDefinition shouldNotBe null
         val tokenResponse = testWallet.processImplicitFlowAuthorization(siopSession.authorizationRequest!!)
         println("tokenResponse vpToken: ${tokenResponse.vpToken}")
@@ -432,7 +454,8 @@ class VP_JVM_Test : AnnotationSpec() {
 
         println("Got token response: $tokenResponse")
 
-        val debugPresentingPresentationSubmission = tokenResponse.toHttpParameters()["presentation_submission"]!!.first()
+        val debugPresentingPresentationSubmission =
+            tokenResponse.toHttpParameters()["presentation_submission"]!!.first()
         val decoded = Json.parseToJsonElement(debugPresentingPresentationSubmission).jsonObject
         val encoded = Json { prettyPrint = true }.encodeToString(decoded)
         println(encoded)
@@ -472,7 +495,7 @@ class VP_JVM_Test : AnnotationSpec() {
         println("Verifier session: $verifierSession")
         verifierSession.authorizationRequest shouldNotBe null
 
-        val walletSession = testWallet.initializeAuthorization(verifierSession.authorizationRequest!!, 60)
+        val walletSession = testWallet.initializeAuthorization(verifierSession.authorizationRequest!!, 1.minutes)
         println("Wallet session: $walletSession")
         val tokenResponse = testWallet.processImplicitFlowAuthorization(walletSession.authorizationRequest!!)
         tokenResponse.vpToken shouldNotBe null
@@ -497,7 +520,7 @@ class VP_JVM_Test : AnnotationSpec() {
         }
         val authReq = AuthorizationRequest.fromHttpQueryString(Url(waltVerifierTestRequest).encodedQuery)
         println("Auth req: $authReq")
-        val walletSession = testWallet.initializeAuthorization(authReq, 60)
+        val walletSession = testWallet.initializeAuthorization(authReq, 1.minutes)
         walletSession.authorizationRequest!!.presentationDefinition shouldNotBe null
         println("Resolved presentation definition: ${walletSession.authorizationRequest!!.presentationDefinition!!.toJSONString()}")
         val tokenResponse = testWallet.processImplicitFlowAuthorization(walletSession.authorizationRequest!!)
