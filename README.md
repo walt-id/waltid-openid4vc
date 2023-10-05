@@ -119,7 +119,15 @@ https://github.com/walt-id/waltid-openid4vc/blob/bd9374826d7acbd0d77d15cd2a81098
 
 * **Simple session management example**
 
+Here we implement a simplistic in-memory session management:
 
+https://github.com/walt-id/waltid-openid4vc/blob/5f7b3b226326a12a2de48e1207dd546e542e2b92/src/jvmTest/kotlin/id/walt/oid4vc/CITestProvider.kt#L58-L63
+
+* **Crypto operations and credential issuance**
+
+Token signing and credential issuance based on [**waltid-ssikit**](https://github.com/walt-id/waltid-ssikit)
+
+https://github.com/walt-id/waltid-openid4vc/blob/5f7b3b226326a12a2de48e1207dd546e542e2b92/src/jvmTest/kotlin/id/walt/oid4vc/CITestProvider.kt#L65-L113
 
 ### Verifier
 
