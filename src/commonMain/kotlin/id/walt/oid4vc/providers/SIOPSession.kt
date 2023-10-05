@@ -7,4 +7,7 @@ data class SIOPSession(
     override val id: String,
     override val authorizationRequest: AuthorizationRequest?,
     override val expirationTimestamp: Instant
-) : AuthorizationSession()
+) : AuthorizationSession() {
+    val presentationDefinition get() = authorizationRequest?.presentationDefinition
+    val nonce get() = authorizationRequest?.nonce
+}
