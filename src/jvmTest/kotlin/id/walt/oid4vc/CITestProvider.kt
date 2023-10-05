@@ -46,7 +46,7 @@ import kotlin.time.Duration.Companion.minutes
 const val CI_PROVIDER_PORT = 8000
 const val CI_PROVIDER_BASE_URL = "http://localhost:$CI_PROVIDER_PORT"
 
-class CITestProvider : OpenIDCredentialIssuer(
+class CITestProvider() : OpenIDCredentialIssuer(
     baseUrl = CI_PROVIDER_BASE_URL,
     config = CredentialIssuerConfig(
         credentialsSupported = listOf(
@@ -64,15 +64,21 @@ class CITestProvider : OpenIDCredentialIssuer(
         )
     )
 ) {
+
+    // session management
     private val authSessions: MutableMap<String, IssuanceSession> = mutableMapOf()
-    private val CI_TOKEN_KEY = KeyService.getService().generate(KeyAlgorithm.RSA)
-    private val CI_DID_KEY = KeyService.getService().generate(KeyAlgorithm.EdDSA_Ed25519)
-    val CI_ISSUER_DID = DidService.create(DidMethod.key, CI_DID_KEY.id)
-    var deferIssuance = false
-    val deferredCredentialRequests = mutableMapOf<String, CredentialRequest>()
+
     override fun getSession(id: String): IssuanceSession? = authSessions[id]
     override fun putSession(id: String, session: IssuanceSession) = authSessions.put(id, session)
     override fun removeSession(id: String) = authSessions.remove(id)
+
+    // crypto operations and credential issuance
+    private val CI_TOKEN_KEY = KeyService.getService().generate(KeyAlgorithm.RSA)
+    private val CI_DID_KEY = KeyService.getService().generate(KeyAlgorithm.EdDSA_Ed25519)
+    val CI_ISSUER_DID = DidService.create(DidMethod.key, CI_DID_KEY.id)
+    val deferredCredentialRequests = mutableMapOf<String, CredentialRequest>()
+    var deferIssuance = false
+
     override fun signToken(target: TokenTarget, payload: JsonObject, header: JsonObject?, keyId: String?) =
         JwtService.getService().sign(keyId ?: CI_TOKEN_KEY.id, payload.toString())
 
@@ -254,3 +260,4 @@ class CITestProvider : OpenIDCredentialIssuer(
         }.start()
     }
 }
+
