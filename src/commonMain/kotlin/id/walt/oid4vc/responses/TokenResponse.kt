@@ -10,6 +10,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 @Serializable
 data class TokenResponse private constructor(
@@ -76,7 +77,7 @@ data class TokenResponse private constructor(
                 parameters["vp_token"]?.firstOrNull()?.let { Json.parseToJsonElement(it) },
                 parameters["scope"]?.firstOrNull(),
                 parameters["c_nonce"]?.firstOrNull(),
-                parameters["c_nonce_expires_in"]?.firstOrNull()?.let { Duration.parse(it) },
+                parameters["c_nonce_expires_in"]?.firstOrNull()?.let { it.toLong().seconds },
                 parameters["authorization_pending"]?.firstOrNull()?.toBoolean(),
                 parameters["interval"]?.firstOrNull()?.toLong(),
                 parameters["presentation_submission"]?.firstOrNull()?.let { PresentationSubmission.fromJSONString(it) },
@@ -106,7 +107,7 @@ data class TokenResponse private constructor(
             }
             scope?.let { put("scope", listOf(it)) }
             cNonce?.let { put("c_nonce", listOf(it)) }
-            cNonceExpiresIn?.let { put("c_nonce_expires_in", listOf(it.toString())) }
+            cNonceExpiresIn?.let { put("c_nonce_expires_in", listOf(it.inWholeSeconds.toString())) }
             authorizationPending?.let { put("authorization_pending", listOf(it.toString())) }
             interval?.let { put("interval", listOf(it.toString())) }
             presentationSubmission?.let { put("presentation_submission", listOf(it.toJSONString())) }
