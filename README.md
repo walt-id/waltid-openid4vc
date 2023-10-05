@@ -111,6 +111,16 @@ https://github.com/walt-id/waltid-openid4vc/blob/bd9374826d7acbd0d77d15cd2a81098
 
 #### Business logic
 
+For the business logic, implement the abstract issuance provider in `src/commonMain/kotlin/id/walt/oid4vc/providers/OpenIDCredentialIssuer.kt`, providing session and cache management, as well, as cryptographic operations for issuing credentials.
+
+* **Configuration of issuance provider**
+
+https://github.com/walt-id/waltid-openid4vc/blob/bd9374826d7acbd0d77d15cd2a81098e643eb6fa/src/jvmTest/kotlin/id/walt/oid4vc/CITestProvider.kt#L39-L56
+
+* **Simple session management example**
+
+
+
 ### Verifier
 
 #### REST endpoints
