@@ -131,7 +131,11 @@ https://github.com/walt-id/waltid-openid4vc/blob/5f7b3b226326a12a2de48e1207dd546
 
 ### Verifier
 
+For the full demo verifier implementation, refer to `/src/jvmTest/kotlin/id/walt/oid4vc/VPTestVerifier.kt`
+
 #### REST endpoints
+
+
 
 #### Business logic
 
