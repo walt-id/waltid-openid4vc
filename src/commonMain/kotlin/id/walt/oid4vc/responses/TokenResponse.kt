@@ -77,7 +77,7 @@ data class TokenResponse private constructor(
                 parameters["vp_token"]?.firstOrNull()?.let { Json.parseToJsonElement(it) },
                 parameters["scope"]?.firstOrNull(),
                 parameters["c_nonce"]?.firstOrNull(),
-                parameters["c_nonce_expires_in"]?.firstOrNull()?.let { it.toLong().seconds },
+                parameters["c_nonce_expires_in"]?.firstOrNull()?.toLong()?.seconds,
                 parameters["authorization_pending"]?.firstOrNull()?.toBoolean(),
                 parameters["interval"]?.firstOrNull()?.toLong(),
                 parameters["presentation_submission"]?.firstOrNull()?.let { PresentationSubmission.fromJSONString(it) },
