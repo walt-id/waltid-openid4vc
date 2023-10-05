@@ -1,9 +1,6 @@
 package id.walt.oid4vc.responses
 
-import id.walt.oid4vc.data.IHTTPDataObject
-import id.walt.oid4vc.data.JsonDataObject
-import id.walt.oid4vc.data.JsonDataObjectFactory
-import id.walt.oid4vc.data.JsonDataObjectSerializer
+import id.walt.oid4vc.data.*
 import id.walt.oid4vc.data.dif.PresentationSubmission
 import id.walt.oid4vc.data.dif.PresentationSubmissionSerializer
 import kotlinx.serialization.SerialName
@@ -22,6 +19,7 @@ data class TokenResponse private constructor(
     @SerialName("vp_token") val vpToken: JsonElement? = null, // FIXME shouldn't this just be a String?
     val scope: String? = null,
     @SerialName("c_nonce") val cNonce: String? = null,
+    @Serializable(DurationInSecondsSerializer::class)
     @SerialName("c_nonce_expires_in") val cNonceExpiresIn: Duration? = null,
     @SerialName("authorization_pending") val authorizationPending: Boolean? = null,
     val interval: Long? = null,
