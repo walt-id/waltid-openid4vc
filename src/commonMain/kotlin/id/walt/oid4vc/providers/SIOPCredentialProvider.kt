@@ -8,7 +8,7 @@ import id.walt.oid4vc.definitions.JWTClaims
 import id.walt.oid4vc.errors.AuthorizationError
 import id.walt.oid4vc.errors.TokenError
 import id.walt.oid4vc.interfaces.ITokenProvider
-import id.walt.oid4vc.interfaces.IVerifiablePresentationProvider
+import id.walt.oid4vc.interfaces.IVPTokenProvider
 import id.walt.oid4vc.requests.AuthorizationRequest
 import id.walt.oid4vc.requests.TokenRequest
 import id.walt.oid4vc.responses.AuthorizationErrorCode
@@ -17,6 +17,7 @@ import id.walt.oid4vc.responses.TokenResponse
 import id.walt.oid4vc.util.randomUUID
 import io.ktor.http.*
 import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -29,10 +30,10 @@ import kotlin.time.Duration
  * in reply to OpenID4VP authorization requests.
  * e.g.: Verifiable Credentials holder wallets
  */
-abstract class SIOPCredentialProvider(
+abstract class SIOPCredentialProvider<S: SIOPSession>(
     baseUrl: String,
     override val config: SIOPProviderConfig
-) : OpenIDProvider<SIOPSession>(baseUrl), ITokenProvider, IVerifiablePresentationProvider {
+) : OpenIDProvider<S>(baseUrl), ITokenProvider, IVPTokenProvider<S> {
     /**
      * Resolve DID to key ID
      * @param did DID to resolve
@@ -113,10 +114,12 @@ abstract class SIOPCredentialProvider(
         }
     }
 
-    override fun initializeAuthorization(authorizationRequest: AuthorizationRequest, expiresIn: Duration): SIOPSession {
+    protected abstract fun createSIOPSession(id: String, authorizationRequest: AuthorizationRequest?, expirationTimestamp: Instant): S
+
+    override fun initializeAuthorization(authorizationRequest: AuthorizationRequest, expiresIn: Duration): S {
         val resolvedAuthReq = resolveVPAuthorizationParameters(authorizationRequest)
         return if (validateAuthorizationRequest(resolvedAuthReq)) {
-            SIOPSession(
+            createSIOPSession(
                 id = randomUUID(),
                 authorizationRequest = resolvedAuthReq,
                 expirationTimestamp = Clock.System.now().plus(expiresIn)
@@ -132,13 +135,13 @@ abstract class SIOPCredentialProvider(
         }
     }
 
-    override fun generateTokenResponse(session: SIOPSession, tokenRequest: TokenRequest): TokenResponse {
+    override fun generateTokenResponse(session: S, tokenRequest: TokenRequest): TokenResponse {
         println("SIOPCredentialProvider generateTokenResponse")
         val presentationDefinition = session.authorizationRequest?.presentationDefinition ?: throw TokenError(
             tokenRequest,
             TokenErrorCode.invalid_request
         )
-        val result = generatePresentation(presentationDefinition, session.authorizationRequest.nonce)
+        val result = generatePresentationForVPToken(session, tokenRequest)
         return if (result.presentations.size == 1) {
             TokenResponse.success(
                 result.presentations.first(),

@@ -12,14 +12,18 @@ import id.walt.oid4vc.data.dif.PresentationDefinition
 import id.walt.oid4vc.data.dif.PresentationSubmission
 import id.walt.oid4vc.data.dif.VCFormat
 import id.walt.oid4vc.errors.AuthorizationError
+import id.walt.oid4vc.errors.PresentationError
+import id.walt.oid4vc.errors.TokenError
 import id.walt.oid4vc.interfaces.PresentationResult
 import id.walt.oid4vc.providers.SIOPCredentialProvider
 import id.walt.oid4vc.providers.SIOPProviderConfig
 import id.walt.oid4vc.providers.SIOPSession
 import id.walt.oid4vc.providers.TokenTarget
 import id.walt.oid4vc.requests.AuthorizationRequest
+import id.walt.oid4vc.requests.TokenRequest
 import id.walt.oid4vc.responses.AuthorizationDirectPostResponse
 import id.walt.oid4vc.responses.AuthorizationErrorCode
+import id.walt.oid4vc.responses.TokenErrorCode
 import id.walt.services.did.DidService
 import id.walt.services.jwt.JwtService
 import io.kotest.common.runBlocking
@@ -37,6 +41,7 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.*
+import kotlinx.datetime.Instant
 import kotlinx.serialization.json.*
 
 const val WALLET_PORT = 8001
@@ -44,7 +49,7 @@ const val WALLET_BASE_URL = "http://localhost:${WALLET_PORT}"
 
 class TestCredentialWallet(
     config: SIOPProviderConfig
-) : SIOPCredentialProvider(WALLET_BASE_URL, config) {
+) : SIOPCredentialProvider<SIOPSession>(WALLET_BASE_URL, config) {
 
     private val sessionCache = mutableMapOf<String, SIOPSession>()
     private val ktorClient = HttpClient(CIO) {
@@ -53,18 +58,22 @@ class TestCredentialWallet(
         }
     }
 
+    override fun createSIOPSession(
+        id: String,
+        authorizationRequest: AuthorizationRequest?,
+        expirationTimestamp: Instant
+    ) = SIOPSession(id, authorizationRequest, expirationTimestamp)
+
     override fun signToken(target: TokenTarget, payload: JsonObject, header: JsonObject?, keyId: String?) =
         JwtService.getService().sign(payload, keyId)
 
     override fun verifyTokenSignature(target: TokenTarget, token: String) =
         JwtService.getService().verify(token).verified
 
-    override fun generatePresentation(
-        presentationDefinition: PresentationDefinition,
-        nonce: String?
-    ): PresentationResult {
+    override fun generatePresentationForVPToken(session: SIOPSession, tokenRequest: TokenRequest): PresentationResult {
         // find credential(s) matching the presentation definition
         // for this test wallet implementation, present all credentials in the wallet
+        val presentationDefinition = session.presentationDefinition ?: throw PresentationError(TokenErrorCode.invalid_request, tokenRequest, session.presentationDefinition)
         val filterString = presentationDefinition.inputDescriptors.flatMap { it.constraints?.fields ?: listOf() }
             .firstOrNull { field -> field.path.any { it.contains("type") } }?.filter?.jsonObject.toString()
         val presentationJwtStr = Custodian.getService()
@@ -75,7 +84,7 @@ class TestCredentialWallet(
                         selectiveDisclosure = null,
                         discloseAll = false
                     )
-                }, TEST_DID, challenge = nonce
+                }, TEST_DID, challenge = session.nonce
             )
 
         println("================")
@@ -133,7 +142,7 @@ class TestCredentialWallet(
         return PresentationResult(
             listOf(JsonPrimitive(presentationJwtStr)), PresentationSubmission(
                 id = "submission 1",
-                definitionId = presentationDefinition.id,
+                definitionId = session.presentationDefinition!!.id,
                 descriptorMap = jwtCredentials.mapIndexed { index, vcJwsStr ->
 
                     val vcJws = vcJwsStr.decodeJws()
