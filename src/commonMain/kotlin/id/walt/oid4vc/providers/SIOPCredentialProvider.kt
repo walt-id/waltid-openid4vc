@@ -146,13 +146,13 @@ abstract class SIOPCredentialProvider<S: SIOPSession>(
             TokenResponse.success(
                 result.presentations.first(),
                 result.presentationSubmission,
-                session.authorizationRequest.state
+                session.authorizationRequest?.state
             )
         } else {
             TokenResponse.success(
                 JsonArray(result.presentations),
                 result.presentationSubmission,
-                session.authorizationRequest.state
+                session.authorizationRequest?.state
             )
         }
     }

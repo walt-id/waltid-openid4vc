@@ -1,6 +1,5 @@
 package id.walt.oid4vc.interfaces
 
-import id.walt.oid4vc.data.dif.PresentationDefinition
 import id.walt.oid4vc.data.dif.PresentationSubmission
 import id.walt.oid4vc.errors.PresentationError
 import id.walt.oid4vc.providers.SIOPSession
