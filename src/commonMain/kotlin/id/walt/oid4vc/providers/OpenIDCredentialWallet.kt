@@ -1,15 +1,19 @@
 package id.walt.oid4vc.providers
 
+import id.walt.oid4vc.data.CredentialOffer
 import id.walt.oid4vc.data.OpenIDClientMetadata
 import id.walt.oid4vc.data.ProofOfPossession
 import id.walt.oid4vc.data.ResponseType
 import id.walt.oid4vc.data.dif.PresentationDefinition
 import id.walt.oid4vc.definitions.JWTClaims
 import id.walt.oid4vc.errors.AuthorizationError
+import id.walt.oid4vc.errors.CredentialOfferError
+import id.walt.oid4vc.errors.CredentialOfferErrorCode
 import id.walt.oid4vc.errors.TokenError
 import id.walt.oid4vc.interfaces.ITokenProvider
 import id.walt.oid4vc.interfaces.IVPTokenProvider
 import id.walt.oid4vc.requests.AuthorizationRequest
+import id.walt.oid4vc.requests.CredentialOfferRequest
 import id.walt.oid4vc.requests.TokenRequest
 import id.walt.oid4vc.responses.AuthorizationErrorCode
 import id.walt.oid4vc.responses.TokenErrorCode
@@ -30,9 +34,9 @@ import kotlin.time.Duration
  * in reply to OpenID4VP authorization requests.
  * e.g.: Verifiable Credentials holder wallets
  */
-abstract class SIOPCredentialProvider<S: SIOPSession>(
+abstract class OpenIDCredentialWallet<S: SIOPSession>(
     baseUrl: String,
-    override val config: SIOPProviderConfig
+    override val config: CredentialWalletConfig
 ) : OpenIDProvider<S>(baseUrl), ITokenProvider, IVPTokenProvider<S> {
     /**
      * Resolve DID to key ID
@@ -155,5 +159,12 @@ abstract class SIOPCredentialProvider<S: SIOPSession>(
                 session.authorizationRequest?.state
             )
         }
+    }
+
+    // issuance
+    open fun getCredentialOffer(credentialOfferRequest: CredentialOfferRequest): CredentialOffer {
+        return credentialOfferRequest.credentialOffer ?: credentialOfferRequest.credentialOfferUri?.let { uri ->
+            resolveJSON(uri)?.let { CredentialOffer.fromJSON(it) }
+        } ?: throw CredentialOfferError(credentialOfferRequest, CredentialOfferErrorCode.invalid_request, "No credential offer value found on request, and credential offer could not be fetched by reference from given credential_offer_uri")
     }
 }

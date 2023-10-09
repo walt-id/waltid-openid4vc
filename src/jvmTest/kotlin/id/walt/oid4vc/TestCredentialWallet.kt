@@ -13,10 +13,9 @@ import id.walt.oid4vc.data.dif.PresentationSubmission
 import id.walt.oid4vc.data.dif.VCFormat
 import id.walt.oid4vc.errors.AuthorizationError
 import id.walt.oid4vc.errors.PresentationError
-import id.walt.oid4vc.errors.TokenError
 import id.walt.oid4vc.interfaces.PresentationResult
-import id.walt.oid4vc.providers.SIOPCredentialProvider
-import id.walt.oid4vc.providers.SIOPProviderConfig
+import id.walt.oid4vc.providers.OpenIDCredentialWallet
+import id.walt.oid4vc.providers.CredentialWalletConfig
 import id.walt.oid4vc.providers.SIOPSession
 import id.walt.oid4vc.providers.TokenTarget
 import id.walt.oid4vc.requests.AuthorizationRequest
@@ -48,8 +47,8 @@ const val WALLET_PORT = 8001
 const val WALLET_BASE_URL = "http://localhost:${WALLET_PORT}"
 
 class TestCredentialWallet(
-    config: SIOPProviderConfig
-) : SIOPCredentialProvider<SIOPSession>(WALLET_BASE_URL, config) {
+    config: CredentialWalletConfig
+) : OpenIDCredentialWallet<SIOPSession>(WALLET_BASE_URL, config) {
 
     private val sessionCache = mutableMapOf<String, SIOPSession>()
     private val ktorClient = HttpClient(CIO) {

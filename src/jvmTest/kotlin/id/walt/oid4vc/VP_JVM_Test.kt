@@ -8,7 +8,7 @@ import id.walt.oid4vc.data.OpenIDClientMetadata
 import id.walt.oid4vc.data.ResponseMode
 import id.walt.oid4vc.data.ResponseType
 import id.walt.oid4vc.data.dif.*
-import id.walt.oid4vc.providers.SIOPProviderConfig
+import id.walt.oid4vc.providers.CredentialWalletConfig
 import id.walt.oid4vc.requests.AuthorizationRequest
 import id.walt.oid4vc.responses.TokenResponse
 import id.walt.servicematrix.ServiceMatrix
@@ -51,7 +51,7 @@ class VP_JVM_Test : AnnotationSpec() {
     @BeforeAll
     fun init() {
         ServiceMatrix("service-matrix.properties")
-        testWallet = TestCredentialWallet(SIOPProviderConfig(WALLET_BASE_URL))
+        testWallet = TestCredentialWallet(CredentialWalletConfig(WALLET_BASE_URL))
         testWallet.start()
 
         testVerifier = VPTestVerifier()

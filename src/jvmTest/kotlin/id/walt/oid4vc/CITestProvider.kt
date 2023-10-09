@@ -256,6 +256,15 @@ class CITestProvider() : OpenIDCredentialIssuer(
                         }
                     }
                 }
+                get("/credential_offer/{session_id}") {
+                    val sessionId = call.parameters["session_id"]!!
+                    val credentialOffer = getSession(sessionId)?.credentialOffer
+                    if(credentialOffer != null) {
+                        call.respond(HttpStatusCode.Created, credentialOffer.toJSON())
+                    } else {
+                        call.respond(HttpStatusCode.NotFound, "Issuance session with given ID not found")
+                    }
+                }
             }
         }.start()
     }
