@@ -28,7 +28,7 @@ import id.walt.services.jwt.JwtService
 import io.kotest.common.runBlocking
 import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.engine.cio.*
+import io.ktor.client.engine.java.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
@@ -51,7 +51,7 @@ class TestCredentialWallet(
 ) : OpenIDCredentialWallet<SIOPSession>(WALLET_BASE_URL, config) {
 
     private val sessionCache = mutableMapOf<String, SIOPSession>()
-    private val ktorClient = HttpClient(CIO) {
+    private val ktorClient = HttpClient(Java) {
         install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
             json()
         }

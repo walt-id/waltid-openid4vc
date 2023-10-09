@@ -19,7 +19,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.engine.cio.*
+import io.ktor.client.engine.java.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
@@ -37,7 +37,7 @@ class VP_JVM_Test : AnnotationSpec() {
     private lateinit var testWallet: TestCredentialWallet
     private lateinit var testVerifier: VPTestVerifier
 
-    val http = HttpClient(CIO) {
+    val http = HttpClient(Java) {
         install(ContentNegotiation) {
             json()
         }

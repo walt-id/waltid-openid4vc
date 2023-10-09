@@ -24,7 +24,7 @@ import io.kotest.matchers.types.instanceOf
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.engine.cio.*
+import io.ktor.client.engine.java.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
@@ -85,7 +85,7 @@ class CI_JVM_Test : AnnotationSpec() {
         )
     )
 
-    val ktorClient = HttpClient(CIO) {
+    val ktorClient = HttpClient(Java) {
         install(ContentNegotiation) {
             json()
         }
