@@ -2,7 +2,10 @@ package id.walt.oid4vc
 
 import id.walt.oid4vc.data.GrantType
 import id.walt.oid4vc.data.OpenIDProviderMetadata
+import id.walt.oid4vc.data.ResponseMode
 import id.walt.oid4vc.providers.CredentialWalletConfig
+import id.walt.oid4vc.providers.OpenIDClientConfig
+import id.walt.oid4vc.requests.AuthorizationRequest
 import id.walt.oid4vc.requests.CredentialOfferRequest
 import id.walt.servicematrix.ServiceMatrix
 import io.kotest.common.runBlocking
@@ -34,29 +37,16 @@ class EBSI_Conformance_Test: AnnotationSpec() {
   @BeforeAll
   fun init() {
     ServiceMatrix("service-matrix.properties")
-    credentialWallet = EBSITestWallet(id.walt.oid4vc.providers.CredentialWalletConfig())
+    credentialWallet = EBSITestWallet(CredentialWalletConfig("https://blank/"))
   }
 
   @Test
   fun testReceiveCredential() {
     val initCredentialOfferUrl = "https://api-conformance.ebsi.eu/conformance/v3/issuer-mock/initiate-credential-offer?credential_type=CTWalletCrossInTime&client_id=did:key:zmYg9bgKmRiCqTTd9MA1ufVE9tfzUptwQp4GMRxptXquJWw4Uj5bVzbAR3ScDrvTYPMZzRCCyZUidTqbgTvbDjZDEzf3XwwVPothBG3iX7xxc9r1A&credential_offer_endpoint=openid-credential-offer://"
-    val inTimeCredentialOfferRequest = runBlocking { ktorClient.get(Url(initCredentialOfferUrl)).bodyAsText() }
+    val inTimeCredentialOfferRequestUri = runBlocking { ktorClient.get(Url(initCredentialOfferUrl)).bodyAsText() }
+    val credentialOfferRequest = CredentialOfferRequest.fromHttpQueryString(Url(inTimeCredentialOfferRequestUri).encodedQuery)
 
-    val credentialOffer = credentialWallet.getCredentialOffer(CredentialOfferRequest.fromHttpQueryString(Url(inTimeCredentialOfferRequest).encodedQuery))
-    credentialOffer.credentialIssuer shouldBe "https://api-conformance.ebsi.eu/conformance/v3/issuer-mock"
-
-    val state = credentialOffer.grants[GrantType.authorization_code.value]?.issuerState
-    println("// get issuer metadata")
-    val providerMetadataUri =
-      credentialWallet.getCIProviderMetadataUrl(credentialOffer.credentialIssuer)
-    val providerMetadata = credentialWallet.resolveJSON(providerMetadataUri)?.let { OpenIDProviderMetadata.fromJSON(it) }
-    providerMetadata shouldNotBe null
-    println("providerMetadata: $providerMetadata")
-    println("// resolve offered credentials")
-    val offeredCredentials = credentialOffer.resolveOfferedCredentials(providerMetadata!!)
-    println("offeredCredentials: $offeredCredentials")
-    offeredCredentials.size shouldNotBe 0
-
-
+    val credentialResponses = credentialWallet.executeFullAuthIssuance(credentialOfferRequest, credentialWallet.TEST_DID, OpenIDClientConfig(credentialWallet.TEST_DID, null, credentialWallet.config.redirectUri))
+    credentialResponses.size shouldNotBe 0
   }
 }

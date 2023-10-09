@@ -10,5 +10,6 @@ class CredentialOfferError(
 }
 
 enum class CredentialOfferErrorCode {
-  invalid_request
+  invalid_request,
+  invalid_issuer
 }

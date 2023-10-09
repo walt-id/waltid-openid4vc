@@ -14,6 +14,7 @@ import id.walt.oid4vc.data.dif.VCFormat
 import id.walt.oid4vc.errors.AuthorizationError
 import id.walt.oid4vc.errors.PresentationError
 import id.walt.oid4vc.interfaces.PresentationResult
+import id.walt.oid4vc.interfaces.SimpleHttpResponse
 import id.walt.oid4vc.providers.OpenIDCredentialWallet
 import id.walt.oid4vc.providers.CredentialWalletConfig
 import id.walt.oid4vc.providers.SIOPSession
@@ -31,6 +32,7 @@ import io.ktor.client.call.*
 import io.ktor.client.engine.java.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -68,6 +70,36 @@ class TestCredentialWallet(
 
     override fun verifyTokenSignature(target: TokenTarget, token: String) =
         JwtService.getService().verify(token).verified
+
+    override fun httpGet(url: Url, headers: Headers?): SimpleHttpResponse {
+        return runBlocking { ktorClient.get(url) {
+            headers {
+                headers?.let { appendAll(it) }
+            }
+        }.let { httpResponse -> SimpleHttpResponse(httpResponse.status, httpResponse.headers, httpResponse.bodyAsText()) } }
+    }
+
+    override fun httpPostObject(url: Url, jsonObject: JsonObject, headers: Headers?): SimpleHttpResponse {
+        return runBlocking { ktorClient.post(url) {
+            headers {
+                headers?.let { appendAll(it) }
+            }
+            contentType(ContentType.Application.Json)
+            setBody(jsonObject)
+        }.let { httpResponse -> SimpleHttpResponse(httpResponse.status, httpResponse.headers, httpResponse.bodyAsText()) } }
+    }
+
+    override fun httpSubmitForm(url: Url, formParameters: Parameters, headers: Headers?): SimpleHttpResponse {
+        return runBlocking { ktorClient.submitForm {
+            url(url)
+            headers {
+                headers?.let { appendAll(it) }
+            }
+            parameters {
+                appendAll(formParameters)
+            }
+        }.let { httpResponse -> SimpleHttpResponse(httpResponse.status, httpResponse.headers, httpResponse.bodyAsText()) } }
+    }
 
     override fun generatePresentationForVPToken(session: SIOPSession, tokenRequest: TokenRequest): PresentationResult {
         // find credential(s) matching the presentation definition
@@ -168,10 +200,6 @@ class TestCredentialWallet(
     override fun resolveDID(did: String): String {
         val didObj = DidService.resolve(did)
         return (didObj.authentication ?: didObj.assertionMethod ?: didObj.verificationMethod)?.firstOrNull()?.id ?: did
-    }
-
-    override fun resolveJSON(url: String): JsonObject? {
-        return runBlocking { ktorClient.get(url).body() }
     }
 
     override fun isPresentationDefinitionSupported(presentationDefinition: PresentationDefinition): Boolean {
