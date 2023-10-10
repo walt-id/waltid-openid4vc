@@ -27,6 +27,7 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.java.*
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
@@ -38,13 +39,17 @@ import kotlinx.serialization.json.*
 
 const val EBSI_WALLET_PORT = 8011
 const val EBSI_WALLET_BASE_URL = "http://localhost:${EBSI_WALLET_PORT}"
-const val EBSI_WALLET_TEST_KEY = "{\"kty\":\"OKP\",\"d\":\"2jDhK3fFep3oaqcVr8548CLJ3_8bgxG9z8DBL6PIrGI\",\"use\":\"sig\",\"crv\":\"Ed25519\",\"kid\":\"ed757b38cbf34afbb1f157c5e2bf08f8\",\"x\":\"1nve9sZ_SmDpuo3A5x4ccjKan5Up2qvMg7qsXOtXVkU\",\"alg\":\"EdDSA\"}"
-const val EBSI_WALLET_TEST_DID = "did:key:zmYg9bgKmRiCqTTd9MA1ufVE9tfzUptwQp4GMRxptXquJWw4Uj5bVzbAR3ScDrvTYPMZzRCCyZUidTqbgTvbDjZDEzf3XwwVPothBG3iX7xxc9r1A"
+const val EBSI_WALLET_TEST_KEY = "{\"kty\":\"EC\",\"d\":\"AENUGJiPF4zRlF1uXV1NTWE5zcQPz-8Ie8SGLdQugec\",\"use\":\"sig\",\"crv\":\"P-256\",\"kid\":\"de8aca52c110485a87fa6fda8d1f2f4e\",\"x\":\"hJ0hFBtp72j1V2xugQI51ernWY_vPXzXjnEg7A709Fc\",\"y\":\"-Mm1j5Zz1mWJU7Nqylk0_6qKjZ5fn6ddzziEFscQPhQ\",\"alg\":\"ES256\"}"
+const val EBSI_WALLET_TEST_DID = "did:key:z2dmzD81cgPx8Vki7JbuuMmFYrWPgYoytykUZ3eyqht1j9KbrksdXfcbvmhgF2h7YfpxWuywkXxDZ7ohTPNPTQpD39Rm9WiBWuEpvvgtfuPHtHi2wTEkZ95KC2ijUMUowyKMueaMhtA5bLYkt9k8Y8Gq4sm6PyTCHTxuyedMMrBKdRXNZS"
 class EBSITestWallet(config: CredentialWalletConfig): OpenIDCredentialWallet<SIOPSession>(EBSI_WALLET_BASE_URL, config) {
   private val sessionCache = mutableMapOf<String, SIOPSession>()
   private val ktorClient = HttpClient(Java) {
     install(ContentNegotiation) {
       json()
+    }
+    install(Logging) {
+      logger = Logger.SIMPLE
+      level = LogLevel.ALL
     }
     followRedirects = false
   }
@@ -82,7 +87,7 @@ class EBSITestWallet(config: CredentialWalletConfig): OpenIDCredentialWallet<SIO
   override fun removeSession(id: String): SIOPSession?  = sessionCache.remove(id)
 
   override fun signToken(target: TokenTarget, payload: JsonObject, header: JsonObject?, keyId: String?) =
-    JwtService.getService().sign(payload, keyId)
+    JwtService.getService().sign(payload, keyId, header?.get("typ")?.jsonPrimitive?.content ?: "JWT")
 
   override fun verifyTokenSignature(target: TokenTarget, token: String) =
     JwtService.getService().verify(token).verified
@@ -106,14 +111,14 @@ class EBSITestWallet(config: CredentialWalletConfig): OpenIDCredentialWallet<SIO
   }
 
   override fun httpSubmitForm(url: Url, formParameters: Parameters, headers: Headers?): SimpleHttpResponse {
-    return runBlocking { ktorClient.submitForm {
-      url(url)
+    return runBlocking { ktorClient.submitForm(url = url.toString(), formParameters = formParameters, encodeInQuery = false) {
+      //url(url)
       headers {
         headers?.let { appendAll(it) }
       }
-      parameters {
-        appendAll(formParameters)
-      }
+      //parameters {
+      //  appendAll(formParameters)
+      //}
     }.let { httpResponse -> SimpleHttpResponse(httpResponse.status, httpResponse.headers, httpResponse.bodyAsText()) } }
   }
 

@@ -11,12 +11,19 @@ import id.walt.oid4vc.interfaces.IVPTokenProvider
 import id.walt.oid4vc.requests.*
 import id.walt.oid4vc.responses.*
 import id.walt.oid4vc.util.randomUUID
+import id.walt.oid4vc.util.sha256
+import id.walt.sdjwt.SDJwt
 import io.ktor.http.*
+import io.ktor.utils.io.charsets.*
+import io.ktor.utils.io.core.*
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.*
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * Base object for a self-issued OpenID provider, providing identity information by presenting verifiable credentials,
@@ -51,6 +58,7 @@ abstract class OpenIDCredentialWallet<S: SIOPSession>(
                 nonce?.let { put(JWTClaims.Payload.nonce, it) }
             }, header = buildJsonObject {
                 put(JWTClaims.Header.keyID, keyId)
+                put(JWTClaims.Header.type, "openid4vci-proof+jwt")
             }, keyId = keyId)
         )
     }
@@ -158,6 +166,7 @@ abstract class OpenIDCredentialWallet<S: SIOPSession>(
         } ?: throw CredentialOfferError(credentialOfferRequest, CredentialOfferErrorCode.invalid_request, "No credential offer value found on request, and credential offer could not be fetched by reference from given credential_offer_uri")
     }
 
+    @OptIn(ExperimentalEncodingApi::class)
     open fun executeFullAuthIssuance(credentialOfferRequest: CredentialOfferRequest, holderDid: String, client: OpenIDClientConfig): List<CredentialResponse> {
         val credentialOffer = getCredentialOffer(credentialOfferRequest)
         if(!credentialOffer.grants.containsKey(GrantType.authorization_code.value)) throw CredentialOfferError(credentialOfferRequest, CredentialOfferErrorCode.invalid_request, "Full authorization issuance flow executed, but no authorization_code found on credential offer")
@@ -167,14 +176,18 @@ abstract class OpenIDCredentialWallet<S: SIOPSession>(
             httpGetAsJson(Url(getCommonProviderMetadataUrl(authServer)))?.jsonObject?.let { OpenIDProviderMetadata.fromJSON(it) }
         } ?: issuerMetadata
         val offeredCredentials = credentialOffer.resolveOfferedCredentials(issuerMetadata)
+        val codeVerifier = if(client.useCodeChallenge) randomUUID() else null
+        val codeChallenge = codeVerifier?.let { Base64.UrlSafe.encode(sha256(it.toByteArray(Charsets.UTF_8))).trimEnd('=') }
 
         val authReq = AuthorizationRequest(
             responseType = ResponseType.getResponseTypeString(ResponseType.code),
             clientId = client.clientID,
             redirectUri = config.redirectUri,
             scope = setOf("openid"),
-            issuerState = credentialOffer.grants[GrantType.authorization_code.value]!!.issuerState,
-            authorizationDetails = offeredCredentials.map { AuthorizationDetails.fromOfferedCredential(it) }
+            issuerState = credentialOffer.grants[GrantType.authorization_code.value]?.issuerState,
+            authorizationDetails = offeredCredentials.map { AuthorizationDetails.fromOfferedCredential(it, issuerMetadata.credentialIssuer) },
+            codeChallenge = codeChallenge,
+            codeChallengeMethod = codeChallenge?.let { "S256" }
         ).let { authReq ->
             if (authorizationServerMetadata.pushedAuthorizationRequestEndpoint != null) {
                 // execute pushed authorization request
@@ -206,12 +219,15 @@ abstract class OpenIDCredentialWallet<S: SIOPSession>(
         }.build())
         println("authResp: $authResp")
         if(authResp.status != HttpStatusCode.Found) throw AuthorizationError(authReq, AuthorizationErrorCode.server_error, "Got unexpected status code ${authResp.status.value} from issuer")
-        val location = Url(authResp.headers[HttpHeaders.Location]!!)
+        var location = Url(authResp.headers[HttpHeaders.Location]!!)
         println("location: $location")
+        location = if(location.parameters.contains("response_type") && location.parameters["response_type"] == ResponseType.id_token.name) {
+            executeIdTokenAuthorization(location, holderDid, client)
+        } else location
 
         val code = location.parameters["code"] ?: throw AuthorizationError(authReq, AuthorizationErrorCode.server_error, "No authorization code received from server")
 
-        val tokenReq = TokenRequest(GrantType.authorization_code, client.clientID, config.redirectUri, code)
+        val tokenReq = TokenRequest(GrantType.authorization_code, client.clientID, config.redirectUri, code, codeVerifier = codeVerifier)
         val tokenHttpResp = httpSubmitForm(Url(authorizationServerMetadata.tokenEndpoint!!), parametersOf(tokenReq.toHttpParameters()))
         if(!tokenHttpResp.status.isSuccess() || tokenHttpResp.body == null) throw TokenError(tokenReq, TokenErrorCode.server_error, "Server returned error code ${tokenHttpResp.status}, or empty body")
         val tokenResp = TokenResponse.fromJSONString(tokenHttpResp.body)
@@ -247,6 +263,29 @@ abstract class OpenIDCredentialWallet<S: SIOPSession>(
         val httpResp = httpPostObject(Url(credentialEndpoint), credentialRequest.toJSON(), Headers.build { set(HttpHeaders.Authorization, "Bearer $accessToken") })
         if(!httpResp.status.isSuccess() || httpResp.body == null) throw CredentialError(credentialRequest, CredentialErrorCode.server_error, "Credential error returned error status ${httpResp.status}, or body is empty")
         return CredentialResponse.fromJSONString(httpResp.body)
+    }
+
+    protected open fun executeIdTokenAuthorization(idTokenRequestUri: Url, holderDid: String, client: OpenIDClientConfig): Url {
+        var authReq = AuthorizationRequest.fromHttpQueryString(idTokenRequestUri.encodedQuery).let { authorizationRequest ->
+            authorizationRequest.customParameters["request"]?.let { AuthorizationJSONRequest.fromJSON(SDJwt.parse(it.first()).fullPayload) } ?: authorizationRequest
+        }
+        if(authReq.responseMode != ResponseMode.direct_post || authReq.responseType != ResponseType.id_token.name || authReq.redirectUri.isNullOrEmpty())
+            throw AuthorizationError(authReq, AuthorizationErrorCode.server_error, "Unexpected response_mode ${authReq.responseMode}, or response_type ${authReq.responseType} returned from server, or redirect_uri is missing")
+
+        val keyId = resolveDID(holderDid)
+        val idToken = signToken(TokenTarget.TOKEN, buildJsonObject {
+            put("iss", holderDid)
+            put("sub", holderDid)
+            put("aud", authReq.clientId)
+            put("exp", Clock.System.now().plus(5.minutes).epochSeconds)
+            put("iat", Clock.System.now().epochSeconds)
+            put("state", authReq.state)
+            put("nonce", authReq.nonce)
+        }, keyId = keyId)
+        val httpResp = httpSubmitForm(Url(authReq.redirectUri!!), parametersOf(Pair("id_token", listOf(idToken)), Pair("state", listOf(authReq.state!!))))
+        if(httpResp.status != HttpStatusCode.Found) throw AuthorizationError(authReq, AuthorizationErrorCode.server_error, "Unexpected status code ${httpResp.status} returned from server for id_token response")
+        return httpResp.headers[HttpHeaders.Location]?.let { Url(it) }
+            ?: throw AuthorizationError(authReq, AuthorizationErrorCode.server_error, "Location parameter missing on http response for id_token response")
     }
 
 }

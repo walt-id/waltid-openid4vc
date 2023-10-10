@@ -4,13 +4,23 @@ import id.walt.oid4vc.data.*
 import id.walt.oid4vc.data.dif.PresentationDefinition
 import kotlinx.serialization.json.Json
 
+interface IAuthorizationRequest {
+    val responseType: String
+    val clientId: String
+    val responseMode: ResponseMode?
+    val redirectUri: String?
+    val scope: Set<String>
+    val state: String?
+    val nonce: String?
+}
+
 data class AuthorizationRequest(
-    val responseType: String = ResponseType.getResponseTypeString(ResponseType.code),
-    val clientId: String,
-    val responseMode: ResponseMode? = null,
-    val redirectUri: String? = null,
-    val scope: Set<String> = setOf(),
-    val state: String? = null,
+    override val responseType: String = ResponseType.getResponseTypeString(ResponseType.code),
+    override val clientId: String,
+    override val responseMode: ResponseMode? = null,
+    override val redirectUri: String? = null,
+    override val scope: Set<String> = setOf(),
+    override val state: String? = null,
     val authorizationDetails: List<AuthorizationDetails>? = null,
     val walletIssuer: String? = null,
     val userHint: String? = null,
@@ -21,10 +31,12 @@ data class AuthorizationRequest(
     val clientIdScheme: ClientIdScheme? = null,
     val clientMetadata: OpenIDClientMetadata? = null,
     val clientMetadataUri: String? = null,
-    val nonce: String? = null,
+    override val nonce: String? = null,
     val responseUri: String? = null,
+    val codeChallenge: String? = null,
+    val codeChallengeMethod: String? = null,
     override val customParameters: Map<String, List<String>> = mapOf()
-) : HTTPDataObject() {
+) : HTTPDataObject(), IAuthorizationRequest {
     val isReferenceToPAR get() = requestUri != null
     override fun toHttpParameters(): Map<String, List<String>> {
         return buildMap {
@@ -52,6 +64,8 @@ data class AuthorizationRequest(
             clientMetadataUri?.let { put("client_metadata_uri", listOf(it)) }
             nonce?.let { put("nonce", listOf(it)) }
             responseUri?.let { put("response_uri", listOf(it)) }
+            codeChallenge?.let { put("code_challenge", listOf(it)) }
+            codeChallengeMethod?.let { put("code_challenge_method", listOf(it)) }
             putAll(customParameters)
         }
     }
@@ -74,7 +88,9 @@ data class AuthorizationRequest(
             "client_metadata_uri",
             "nonce",
             "response_mode",
-            "response_uri"
+            "response_uri",
+            "code_challenge",
+            "code_challenge_method"
         )
 
         override fun fromHttpParameters(parameters: Map<String, List<String>>): AuthorizationRequest {
@@ -102,6 +118,8 @@ data class AuthorizationRequest(
                 parameters["client_metadata_uri"]?.firstOrNull(),
                 parameters["nonce"]?.firstOrNull(),
                 parameters["response_uri"]?.firstOrNull(),
+                parameters["code_challenge"]?.firstOrNull(),
+                parameters["code_challenge_method"]?.firstOrNull(),
                 parameters.filterKeys { !knownKeys.contains(it) }
             )
         }

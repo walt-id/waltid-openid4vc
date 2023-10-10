@@ -11,6 +11,7 @@ data class TokenRequest(
     val code: String? = null,
     val preAuthorizedCode: String? = null,
     val userPin: String? = null,
+    val codeVerifier: String? = null,
     override val customParameters: Map<String, List<String>> = mapOf()
 ) : HTTPDataObject() {
     override fun toHttpParameters(): Map<String, List<String>> {
@@ -21,13 +22,14 @@ data class TokenRequest(
             code?.let { put("code", listOf(it)) }
             preAuthorizedCode?.let { put("pre-authorized_code", listOf(it)) }
             userPin?.let { put("user_pin", listOf(it)) }
+            codeVerifier?.let { put("code_verifier", listOf(it)) }
             putAll(customParameters)
         }
     }
 
     companion object : HTTPDataObjectFactory<TokenRequest>() {
         private val knownKeys =
-            setOf("grant_type", "client_id", "redirect_uri", "code", "pre-authorized_code", "user_pin")
+            setOf("grant_type", "client_id", "redirect_uri", "code", "pre-authorized_code", "user_pin", "code_verifier")
 
         override fun fromHttpParameters(parameters: Map<String, List<String>>): TokenRequest {
             return TokenRequest(
@@ -37,6 +39,7 @@ data class TokenRequest(
                 parameters["code"]?.firstOrNull(),
                 parameters["pre-authorized_code"]?.firstOrNull(),
                 parameters["user_pin"]?.firstOrNull(),
+                parameters["code_verifier"]?.firstOrNull(),
                 parameters.filterKeys { !knownKeys.contains(it) }
             )
         }

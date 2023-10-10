@@ -74,7 +74,7 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
                 implementation("io.ktor:ktor-http:$ktor_version")
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.1")
-                implementation("id.walt:waltid-sd-jwt:1.2309211114.0")
+                implementation("id.walt:waltid-sd-jwt:1.2310101347.0")
             }
         }
         val commonTest by getting {
@@ -98,7 +98,7 @@ kotlin {
                 implementation("io.kotest:kotest-assertions-json:5.7.2")
 
                 implementation("id.walt.servicematrix:WaltID-ServiceMatrix:1.1.3")
-                implementation("id.walt:waltid-ssikit:1.JWTPRESENT")
+                implementation("id.walt:waltid-ssikit:1.JWTTYP")
                 implementation("id.walt:core-crypto:1.0.2-SNAPSHOT")
 
                 implementation("io.ktor:ktor-server-core-jvm:$ktor_version")
