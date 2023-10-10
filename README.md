@@ -141,3 +141,35 @@ For the full demo verifier implementation, refer to `/src/jvmTest/kotlin/id/walt
 ## License
 
 Licensed under the [Apache License, Version 2.0](https://github.com/walt-id/waltid-xyzkit/blob/master/LICENSE)
+
+
+# Example flows:
+
+## EBSI conformance test: Credential issuance:
+
+```mermaid
+sequenceDiagram
+Issuer -->> Wallet: Issuance request (QR, or by request)
+Wallet ->> Issuer: Resolve credential offer
+Issuer -->> Wallet: Credential offer
+Wallet ->> Issuer: fetch OpenID Credential Issuer metadata
+Issuer -->> Wallet: Credential issuer metadata
+Wallet ->> Wallet: Check if external authorization service (AS)
+Wallet ->> AS: fetch OpenID provider metadata
+AS -->> Wallet: OpenID provider metadata
+Wallet ->> Wallet: resolve offered credential metainfo
+Wallet ->> Wallet: Generate code verifier and code challenge
+Wallet ->> AS: Authorization request, auth details and code challenge
+AS -->> Wallet: Redirect to wallet with id_token request
+Wallet ->> Wallet: Generate id_token
+Wallet ->> AS: POST id_token response to redirect_uri
+AS -->> Wallet: Redirect to wallet with authorzation code
+Wallet ->> AS: POST token request with code and code verifier
+AS -->> Wallet: Respond with access_token and c_nonce
+loop Fetch offered credentials
+Wallet ->> Wallet: generate DID proof
+Wallet ->> Issuer: Fetch credentials from credential endpoint or batch-credential endpoint, with DID proof
+Issuer -->> Wallet: Credential (and updated c_nonce)
+end
+
+```

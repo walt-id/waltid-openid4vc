@@ -42,11 +42,11 @@ class EBSI_Conformance_Test: AnnotationSpec() {
 
   @Test
   fun testReceiveCredential() {
-    val initCredentialOfferUrl = "https://api-conformance.ebsi.eu/conformance/v3/issuer-mock/initiate-credential-offer?credential_type=CTWalletCrossInTime&client_id=did:key:zmYg9bgKmRiCqTTd9MA1ufVE9tfzUptwQp4GMRxptXquJWw4Uj5bVzbAR3ScDrvTYPMZzRCCyZUidTqbgTvbDjZDEzf3XwwVPothBG3iX7xxc9r1A&credential_offer_endpoint=openid-credential-offer://"
+    val initCredentialOfferUrl = "https://api-conformance.ebsi.eu/conformance/v3/issuer-mock/initiate-credential-offer?credential_type=CTWalletCrossInTime&client_id=${credentialWallet.TEST_DID}&credential_offer_endpoint=openid-credential-offer://"
     val inTimeCredentialOfferRequestUri = runBlocking { ktorClient.get(Url(initCredentialOfferUrl)).bodyAsText() }
     val credentialOfferRequest = CredentialOfferRequest.fromHttpQueryString(Url(inTimeCredentialOfferRequestUri).encodedQuery)
 
-    val credentialResponses = credentialWallet.executeFullAuthIssuance(credentialOfferRequest, credentialWallet.TEST_DID, OpenIDClientConfig(credentialWallet.TEST_DID, null, credentialWallet.config.redirectUri))
+    val credentialResponses = credentialWallet.executeFullAuthIssuance(credentialOfferRequest, credentialWallet.TEST_DID, OpenIDClientConfig(credentialWallet.TEST_DID, null, credentialWallet.config.redirectUri, useCodeChallenge = true))
     credentialResponses.size shouldNotBe 0
   }
 }
