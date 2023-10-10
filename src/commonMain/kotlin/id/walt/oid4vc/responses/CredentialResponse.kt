@@ -79,7 +79,8 @@ enum class CredentialErrorCode {
     insufficient_scope,
     unsupported_credential_type,
     unsupported_credential_format,
-    invalid_or_missing_proof
+    invalid_or_missing_proof,
+    server_error
 }
 
 object CredentialResponseListSerializer : KSerializer<List<CredentialResponse>> {

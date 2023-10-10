@@ -8,7 +8,7 @@ import id.walt.oid4vc.data.CredentialFormat
 import id.walt.oid4vc.data.GrantType
 import id.walt.oid4vc.data.OpenIDProviderMetadata
 import id.walt.oid4vc.providers.OpenIDClientConfig
-import id.walt.oid4vc.providers.SIOPProviderConfig
+import id.walt.oid4vc.providers.CredentialWalletConfig
 import id.walt.oid4vc.requests.AuthorizationRequest
 import id.walt.oid4vc.requests.CredentialOfferRequest
 import id.walt.oid4vc.requests.CredentialRequest
@@ -23,7 +23,7 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.engine.cio.*
+import io.ktor.client.engine.java.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
@@ -43,7 +43,7 @@ class wallettest : AnnotationSpec() {
      * 3. Run test "wallettest" (this file)
      */
 
-    private val ktorClient = HttpClient(CIO) {
+    private val ktorClient = HttpClient(Java) {
         install(ContentNegotiation) {
             json()
         }
@@ -58,7 +58,7 @@ class wallettest : AnnotationSpec() {
     fun init() {
         ServiceMatrix("service-matrix.properties")
         ciTestProvider = CITestProvider()
-        credentialWallet = TestCredentialWallet(SIOPProviderConfig("http://blank"))
+        credentialWallet = TestCredentialWallet(CredentialWalletConfig("http://blank"))
         //ciTestProvider.start()
     }
 

@@ -126,5 +126,6 @@ enum class TokenErrorCode {
     invalid_grant,
     unauthorized_client,
     unsupported_grant_type,
-    invalid_scope
+    invalid_scope,
+    server_error
 }

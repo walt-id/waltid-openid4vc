@@ -8,7 +8,7 @@ import id.walt.oid4vc.data.OpenIDClientMetadata
 import id.walt.oid4vc.data.ResponseMode
 import id.walt.oid4vc.data.ResponseType
 import id.walt.oid4vc.data.dif.*
-import id.walt.oid4vc.providers.SIOPProviderConfig
+import id.walt.oid4vc.providers.CredentialWalletConfig
 import id.walt.oid4vc.requests.AuthorizationRequest
 import id.walt.oid4vc.responses.TokenResponse
 import id.walt.servicematrix.ServiceMatrix
@@ -19,7 +19,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.engine.cio.*
+import io.ktor.client.engine.java.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
@@ -37,7 +37,7 @@ class VP_JVM_Test : AnnotationSpec() {
     private lateinit var testWallet: TestCredentialWallet
     private lateinit var testVerifier: VPTestVerifier
 
-    val http = HttpClient(CIO) {
+    val http = HttpClient(Java) {
         install(ContentNegotiation) {
             json()
         }
@@ -51,7 +51,7 @@ class VP_JVM_Test : AnnotationSpec() {
     @BeforeAll
     fun init() {
         ServiceMatrix("service-matrix.properties")
-        testWallet = TestCredentialWallet(SIOPProviderConfig(WALLET_BASE_URL))
+        testWallet = TestCredentialWallet(CredentialWalletConfig(WALLET_BASE_URL))
         testWallet.start()
 
         testVerifier = VPTestVerifier()
@@ -122,7 +122,7 @@ class VP_JVM_Test : AnnotationSpec() {
         }
         println("Auth resp: $authReq")
         authResp.status shouldBe HttpStatusCode.Found
-        authResp.headers.names() shouldContain HttpHeaders.Location
+        authResp.headers.names() shouldContain HttpHeaders.Location.lowercase()
         val redirectUrl = Url(authResp.headers[HttpHeaders.Location]!!)
         val tokenResponse = TokenResponse.fromHttpParameters(redirectUrl.parameters.toMap())
         tokenResponse.vpToken shouldNotBe null

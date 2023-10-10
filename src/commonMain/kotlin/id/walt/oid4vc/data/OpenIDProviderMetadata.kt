@@ -111,7 +111,7 @@ data class OpenIDProviderMetadata(
     @SerialName("authorization_server") val authorizationServer: String? = null,
     @SerialName("display") @Serializable(DisplayPropertiesListSerializer::class) val display: List<DisplayProperties>? = null,
     @SerialName("presentation_definition_uri_supported") val presentationDefinitionUriSupported: Boolean? = null,
-    @SerialName("vp_formats_supported") @Serializable(SupportedVPFormatMapSerializer::class) val vpFormatsSupported: Map<CredentialFormat, SupportedVPFormat>? = null,
+    //@SerialName("vp_formats_supported") @Serializable(SupportedVPFormatMapSerializer::class) val vpFormatsSupported: Map<CredentialFormat, SupportedVPFormat>? = null,
     @SerialName("client_id_schemes_supported") val clientIdSchemesSupported: List<String>? = null,
     override val customParameters: Map<String, JsonElement> = mapOf()
 ) : JsonDataObject() {
