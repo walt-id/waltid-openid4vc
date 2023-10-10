@@ -26,6 +26,7 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.java.*
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
@@ -88,6 +89,10 @@ class CI_JVM_Test : AnnotationSpec() {
     val ktorClient = HttpClient(Java) {
         install(ContentNegotiation) {
             json()
+        }
+        install(Logging) {
+            logger = Logger.SIMPLE
+            level = LogLevel.ALL
         }
         followRedirects = false
     }
@@ -295,7 +300,7 @@ class CI_JVM_Test : AnnotationSpec() {
         }
         println("authResp: $authResp")
         authResp.status shouldBe HttpStatusCode.Found
-        authResp.headers.names() shouldContain HttpHeaders.Location
+        authResp.headers.names() shouldContain HttpHeaders.Location.lowercase()
         val location = Url(authResp.headers[HttpHeaders.Location]!!)
         println("location: $location")
         location.toString() shouldStartWith credentialWallet.config.redirectUri!!
@@ -698,7 +703,7 @@ class CI_JVM_Test : AnnotationSpec() {
         println("authResp: $authResp")
 
         authResp.status shouldBe HttpStatusCode.Found
-        authResp.headers.names() shouldContain HttpHeaders.Location
+        authResp.headers.names() shouldContain HttpHeaders.Location.lowercase()
 
         val location = Url(authResp.headers[HttpHeaders.Location]!!)
         println("location: $location")

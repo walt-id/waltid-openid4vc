@@ -122,7 +122,7 @@ class VP_JVM_Test : AnnotationSpec() {
         }
         println("Auth resp: $authReq")
         authResp.status shouldBe HttpStatusCode.Found
-        authResp.headers.names() shouldContain HttpHeaders.Location
+        authResp.headers.names() shouldContain HttpHeaders.Location.lowercase()
         val redirectUrl = Url(authResp.headers[HttpHeaders.Location]!!)
         val tokenResponse = TokenResponse.fromHttpParameters(redirectUrl.parameters.toMap())
         tokenResponse.vpToken shouldNotBe null
