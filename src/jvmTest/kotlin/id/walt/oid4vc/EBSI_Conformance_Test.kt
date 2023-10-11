@@ -1,20 +1,14 @@
 package id.walt.oid4vc
 
-import id.walt.oid4vc.data.GrantType
-import id.walt.oid4vc.data.OpenIDProviderMetadata
-import id.walt.oid4vc.data.ResponseMode
 import id.walt.oid4vc.providers.CredentialWalletConfig
 import id.walt.oid4vc.providers.OpenIDClientConfig
-import id.walt.oid4vc.requests.AuthorizationRequest
 import id.walt.oid4vc.requests.CredentialOfferRequest
 import id.walt.servicematrix.ServiceMatrix
 import io.kotest.common.runBlocking
 import io.kotest.core.spec.style.AnnotationSpec
-import io.kotest.core.spec.style.Test
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.ktor.client.*
-import io.ktor.client.call.*
 import io.ktor.client.engine.java.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
@@ -22,7 +16,6 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.util.*
-import kotlinx.serialization.json.JsonObject
 
 class EBSI_Conformance_Test: AnnotationSpec() {
 
@@ -83,5 +76,23 @@ class EBSI_Conformance_Test: AnnotationSpec() {
     credentialResponse.isDeferred shouldBe false
     credentialResponse.isSuccess shouldBe true
     credentialResponse.credential shouldNotBe null
+  }
+
+  @Test
+  fun testPreAuthorizedCodeIssuanceFlow() {
+    val initCredentialOfferUrl = URLBuilder("https://api-conformance.ebsi.eu/conformance/v3/issuer-mock/initiate-credential-offer?credential_type=CTWalletCrossPreAuthorised").run {
+      parameters.appendAll(StringValues.build {
+        append("client_id", credentialWallet.TEST_DID)
+        append("credential_offer_endpoint", "openid-credential-offer://")
+      })
+      build()
+    }
+    val preAuthCredentialOfferRequestUri = runBlocking { ktorClient.get(initCredentialOfferUrl).bodyAsText() }
+    val preAuthCredentialOfferRequest = CredentialOfferRequest.fromHttpQueryString(Url(preAuthCredentialOfferRequestUri).encodedQuery)
+    val preAuthCredentialOffer = credentialWallet.resolveCredentialOffer(preAuthCredentialOfferRequest)
+    val preAuthCredentialResponses = credentialWallet.executePreAuthorizedCodeFlow(preAuthCredentialOffer, credentialWallet.TEST_DID, ebsiClientConfig, "3818")
+    preAuthCredentialResponses.size shouldBe 1
+    preAuthCredentialResponses[0].isSuccess shouldBe true
+    preAuthCredentialResponses[0].credential shouldNotBe null
   }
 }
