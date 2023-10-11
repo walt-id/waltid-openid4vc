@@ -14,6 +14,7 @@ import id.walt.oid4vc.util.randomUUID
 import id.walt.oid4vc.util.sha256
 import id.walt.sdjwt.SDJwt
 import io.ktor.http.*
+import io.ktor.http.auth.*
 import io.ktor.utils.io.charsets.*
 import io.ktor.utils.io.core.*
 import kotlinx.datetime.Clock
@@ -160,18 +161,17 @@ abstract class OpenIDCredentialWallet<S: SIOPSession>(
 
     // ==========================================================
     // ===============  issuance flow ===========================
-    open fun getCredentialOffer(credentialOfferRequest: CredentialOfferRequest): CredentialOffer {
+    open fun resolveCredentialOffer(credentialOfferRequest: CredentialOfferRequest): CredentialOffer {
         return credentialOfferRequest.credentialOffer ?: credentialOfferRequest.credentialOfferUri?.let { uri ->
             httpGetAsJson(Url(uri))?.jsonObject?.let { CredentialOffer.fromJSON(it) }
-        } ?: throw CredentialOfferError(credentialOfferRequest, CredentialOfferErrorCode.invalid_request, "No credential offer value found on request, and credential offer could not be fetched by reference from given credential_offer_uri")
+        } ?: throw CredentialOfferError(credentialOfferRequest, null, CredentialOfferErrorCode.invalid_request, "No credential offer value found on request, and credential offer could not be fetched by reference from given credential_offer_uri")
     }
 
     @OptIn(ExperimentalEncodingApi::class)
-    open fun executeFullAuthIssuance(credentialOfferRequest: CredentialOfferRequest, holderDid: String, client: OpenIDClientConfig): List<CredentialResponse> {
-        val credentialOffer = getCredentialOffer(credentialOfferRequest)
-        if(!credentialOffer.grants.containsKey(GrantType.authorization_code.value)) throw CredentialOfferError(credentialOfferRequest, CredentialOfferErrorCode.invalid_request, "Full authorization issuance flow executed, but no authorization_code found on credential offer")
+    open fun executeFullAuthIssuance(credentialOffer: CredentialOffer, holderDid: String, client: OpenIDClientConfig): List<CredentialResponse> {
+        if(!credentialOffer.grants.containsKey(GrantType.authorization_code.value)) throw CredentialOfferError(null, credentialOffer, CredentialOfferErrorCode.invalid_request, "Full authorization issuance flow executed, but no authorization_code found on credential offer")
         val issuerMetadataUrl = getCIProviderMetadataUrl(credentialOffer.credentialIssuer)
-        val issuerMetadata = httpGetAsJson(Url(issuerMetadataUrl))?.jsonObject?.let { OpenIDProviderMetadata.fromJSON(it) } ?: throw CredentialOfferError(credentialOfferRequest, CredentialOfferErrorCode.invalid_issuer, "Could not resolve issuer provider metadata from $issuerMetadataUrl")
+        val issuerMetadata = httpGetAsJson(Url(issuerMetadataUrl))?.jsonObject?.let { OpenIDProviderMetadata.fromJSON(it) } ?: throw CredentialOfferError(null, credentialOffer, CredentialOfferErrorCode.invalid_issuer, "Could not resolve issuer provider metadata from $issuerMetadataUrl")
         val authorizationServerMetadata = issuerMetadata.authorizationServer?.let { authServer ->
             httpGetAsJson(Url(getCommonProviderMetadataUrl(authServer)))?.jsonObject?.let { OpenIDProviderMetadata.fromJSON(it) }
         } ?: issuerMetadata
@@ -250,6 +250,18 @@ abstract class OpenIDCredentialWallet<S: SIOPSession>(
                 CredentialRequest.forOfferedCredential(it, generateDidProof(holderDid, credentialOffer.credentialIssuer, nonce, client))
             })
         }
+    }
+
+    open fun fetchDeferredCredential(credentialOffer: CredentialOffer, credentialResponse: CredentialResponse): CredentialResponse {
+        if(credentialResponse.acceptanceToken.isNullOrEmpty()) throw CredentialOfferError(null, credentialOffer, CredentialOfferErrorCode.invalid_request, "Credential offer has no acceptance token for fetching deferred credential")
+        val issuerMetadataUrl = getCIProviderMetadataUrl(credentialOffer.credentialIssuer)
+        val issuerMetadata = httpGetAsJson(Url(issuerMetadataUrl))?.jsonObject?.let { OpenIDProviderMetadata.fromJSON(it) } ?: throw CredentialOfferError(null, credentialOffer, CredentialOfferErrorCode.invalid_issuer, "Could not resolve issuer provider metadata from $issuerMetadataUrl")
+        if(issuerMetadata.deferredCredentialEndpoint.isNullOrEmpty()) throw CredentialOfferError(null, credentialOffer, CredentialOfferErrorCode.invalid_issuer, "No deferred credential endpoint found in issuer metadata")
+        val deferredCredResp = httpSubmitForm(Url(issuerMetadata.deferredCredentialEndpoint), parametersOf(), headers {
+            append(HttpHeaders.Authorization, "Bearer ${credentialResponse.acceptanceToken}")
+        })
+        if(!deferredCredResp.status.isSuccess() || deferredCredResp.body.isNullOrEmpty()) throw CredentialError(null, CredentialErrorCode.server_error, "No credential received from deferred credential endpoint, or server responded with error status ${deferredCredResp.status}")
+        return CredentialResponse.fromJSONString(deferredCredResp.body)
     }
 
     protected open fun executeBatchCredentialRequest(batchEndpoint: String, accessToken: String, credentialRequests: List<CredentialRequest>): List<CredentialResponse> {
