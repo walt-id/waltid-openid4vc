@@ -165,7 +165,6 @@ abstract class OpenIDCredentialWallet<S: SIOPSession>(
         } ?: throw CredentialOfferError(credentialOfferRequest, null, CredentialOfferErrorCode.invalid_request, "No credential offer value found on request, and credential offer could not be fetched by reference from given credential_offer_uri")
     }
 
-    @OptIn(ExperimentalEncodingApi::class)
     open fun executePreAuthorizedCodeFlow(credentialOffer: CredentialOffer, holderDid: String, client: OpenIDClientConfig, userPIN: String?): List<CredentialResponse> {
         if(!credentialOffer.grants.containsKey(GrantType.pre_authorized_code.value)) throw CredentialOfferError(null, credentialOffer, CredentialOfferErrorCode.invalid_request, "Pre-authorized code issuance flow executed, but no pre-authorized_code found on credential offer")
         val issuerMetadataUrl = getCIProviderMetadataUrl(credentialOffer.credentialIssuer)
