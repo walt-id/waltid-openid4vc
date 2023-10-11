@@ -235,6 +235,8 @@ abstract class OpenIDCredentialWallet<S: SIOPSession>(
         println("location: $location")
         location = if(location.parameters.contains("response_type") && location.parameters["response_type"] == ResponseType.id_token.name) {
             executeIdTokenAuthorization(location, holderDid, client)
+        } else if(location.parameters.contains("response_type") && location.parameters["response_type"] == ResponseType.vp_token.name) {
+            executeVpTokenAuthorization(location, holderDid, client)
         } else location
 
         val code = location.parameters["code"] ?: throw AuthorizationError(authReq, AuthorizationErrorCode.server_error, "No authorization code received from server")
@@ -320,6 +322,19 @@ abstract class OpenIDCredentialWallet<S: SIOPSession>(
         if(httpResp.status != HttpStatusCode.Found) throw AuthorizationError(authReq, AuthorizationErrorCode.server_error, "Unexpected status code ${httpResp.status} returned from server for id_token response")
         return httpResp.headers[HttpHeaders.Location]?.let { Url(it) }
             ?: throw AuthorizationError(authReq, AuthorizationErrorCode.server_error, "Location parameter missing on http response for id_token response")
+    }
+
+    open fun executeVpTokenAuthorization(vpTokenRequestUri: Url, holderDid: String, client: OpenIDClientConfig): Url {
+        val authReq = AuthorizationRequest.fromHttpQueryString(vpTokenRequestUri.encodedQuery)
+        val tokenResp = processImplicitFlowAuthorization(authReq.copy(
+            clientId = client.clientID,
+        ))
+        val httpResp = httpSubmitForm(Url(authReq.responseUri ?: authReq.redirectUri!!), parametersOf(tokenResp.toHttpParameters()))
+        return when(httpResp.status) {
+            HttpStatusCode.Found -> httpResp.headers[HttpHeaders.Location]
+            HttpStatusCode.OK -> httpResp.body?.let { AuthorizationDirectPostResponse.fromJSONString(it) }?.redirectUri
+            else -> null
+        }?.let { Url(it) } ?: throw AuthorizationError(authReq, AuthorizationErrorCode.invalid_request, "Request could not be executed")
     }
 
 }

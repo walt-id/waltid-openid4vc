@@ -62,6 +62,7 @@ class EBSITestWallet(config: CredentialWalletConfig): OpenIDCredentialWallet<SIO
       KeyService.getService().addAlias(keyId, EBSI_WALLET_TEST_DID)
       val didDoc = DidService.resolve(EBSI_WALLET_TEST_DID)
       KeyService.getService().addAlias(keyId, didDoc.verificationMethod!!.first().id)
+      DidService.importDid(EBSI_WALLET_TEST_DID)
     }
   }
   override fun resolveDID(did: String): String {
@@ -160,10 +161,11 @@ class EBSITestWallet(config: CredentialWalletConfig): OpenIDCredentialWallet<SIO
               ?: "VerifiableCredential"
 
           DescriptorMapping(
-            id = type,
+            id = "same-device-in-time-credential",
             format = VCFormat.jwt_vp,  // jwt_vp_json
             path = "$",
             pathNested = DescriptorMapping(
+              id = type,
               format = VCFormat.jwt_vc,
               path = "$.vp.verifiableCredential[0]",
             )
