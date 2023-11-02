@@ -124,7 +124,7 @@ class EBSI_Conformance_Test: AnnotationSpec() {
     preAuthCredentialResponses[0].credential shouldNotBe null
   }
 
-  //@Test
+//  @Test
   fun testIssuanceWithPresentationExchange() {
     val initIssuanceWithPresentationExchangeUrl = URLBuilder("https://api-conformance.ebsi.eu/conformance/v3/issuer-mock/initiate-credential-offer?credential_type=CTWalletQualificationCredential").run {
       parameters.appendAll(StringValues.build {
