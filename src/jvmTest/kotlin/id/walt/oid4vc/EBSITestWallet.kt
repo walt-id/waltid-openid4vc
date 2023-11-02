@@ -36,6 +36,7 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.util.*
 import kotlinx.datetime.Instant
 import kotlinx.serialization.json.*
+import java.util.UUID
 
 const val EBSI_WALLET_PORT = 8011
 const val EBSI_WALLET_BASE_URL = "http://localhost:${EBSI_WALLET_PORT}"
@@ -117,9 +118,9 @@ class EBSITestWallet(config: CredentialWalletConfig): OpenIDCredentialWallet<SIO
       headers {
         headers?.let { appendAll(it) }
       }
-      //parameters {
-      //  appendAll(formParameters)
-      //}
+      parameters {
+        appendAll(formParameters)
+      }
     }.let { httpResponse -> SimpleHttpResponse(httpResponse.status, httpResponse.headers, httpResponse.bodyAsText()) } }
   }
 
@@ -151,23 +152,22 @@ class EBSITestWallet(config: CredentialWalletConfig): OpenIDCredentialWallet<SIO
         .jsonArray.map { it.jsonPrimitive.content }
     return PresentationResult(
       listOf(JsonPrimitive(presentationJwtStr)), PresentationSubmission(
-        id = "submission 1",
+        id = UUID.randomUUID().toString(),
         definitionId = session.presentationDefinition!!.id,
         descriptorMap = jwtCredentials.mapIndexed { index, vcJwsStr ->
-
           val vcJws = vcJwsStr.decodeJws()
-          val type =
+          val descriptorId = getDescriptorMapId(
             vcJws.payload["vc"]?.jsonObject?.get("type")?.jsonArray?.last()?.jsonPrimitive?.contentOrNull
               ?: "VerifiableCredential"
-
+          )
           DescriptorMapping(
-            id = "same-device-in-time-credential",
+            id = descriptorId,
             format = VCFormat.jwt_vp,  // jwt_vp_json
             path = "$",
             pathNested = DescriptorMapping(
-              id = type,
+              id = descriptorId,
               format = VCFormat.jwt_vc,
-              path = "$.vp.verifiableCredential[0]",
+              path = "$.vp.verifiableCredential[$index]",
             )
           )
         }
@@ -177,5 +177,14 @@ class EBSITestWallet(config: CredentialWalletConfig): OpenIDCredentialWallet<SIO
 
   override fun putSession(id: String, session: SIOPSession): SIOPSession? = sessionCache.put(id, session)
 
+  private fun getDescriptorMapId(type: String) = when (type){
+    "CTWalletSameInTime" -> "same-device-in-time-credential"
+    "CTWalletCrossInTime" -> "cross-device-in-time-credential"
+    "CTWalletSameDeferred" -> "same-device-deferred-credential"
+    "CTWalletCrossDeferred" -> "cross-device-deferred-credential"
+    "CTWalletSamePreAuthorised" -> "same-device-pre_authorised-credential"
+    "CTWalletCrossPreAuthorised" -> "cross-device-pre_authorised-credential"
+    else -> type
+  }
 
 }
