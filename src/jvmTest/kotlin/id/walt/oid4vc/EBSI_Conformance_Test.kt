@@ -1,8 +1,12 @@
 package id.walt.oid4vc
 
+import id.walt.credentials.w3c.VerifiableCredential
+import id.walt.custodian.Custodian
 import id.walt.oid4vc.providers.CredentialWalletConfig
 import id.walt.oid4vc.providers.OpenIDClientConfig
 import id.walt.oid4vc.requests.CredentialOfferRequest
+import id.walt.oid4vc.responses.CredentialResponse
+import id.walt.oid4vc.util.randomUUID
 import id.walt.servicematrix.ServiceMatrix
 import io.kotest.common.runBlocking
 import io.kotest.core.spec.style.StringSpec
@@ -18,10 +22,11 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.util.*
+import kotlinx.serialization.json.jsonPrimitive
 
 class EBSI_Conformance_Test: StringSpec({
 
-  val VcTestsEnabled = false
+  val VcTestsEnabled = true
   val VpTestsEnabled = true
 
   lateinit var credentialWallet: EBSITestWallet
@@ -75,8 +80,7 @@ class EBSI_Conformance_Test: StringSpec({
       credentialResponses.size shouldBe 1
       credentialResponses[0].isDeferred shouldBe false
       credentialResponses[0].credential shouldNotBe null
-      //val cred = VerifiableCredential.fromString(credentialResponses[0].credential!!.jsonPrimitive.content)
-      //Custodian.getService().storeCredential(cred.id ?: randomUUID(), cred)
+      storeCredentials(credentialResponses[0])
     }
   }
 
@@ -110,6 +114,7 @@ class EBSI_Conformance_Test: StringSpec({
       credentialResponse.isDeferred shouldBe false
       credentialResponse.isSuccess shouldBe true
       credentialResponse.credential shouldNotBe null
+      storeCredentials(credentialResponse)
     }
   }
 
@@ -137,6 +142,7 @@ class EBSI_Conformance_Test: StringSpec({
       preAuthCredentialResponses.size shouldBe 1
       preAuthCredentialResponses[0].isSuccess shouldBe true
       preAuthCredentialResponses[0].credential shouldNotBe null
+      storeCredentials(preAuthCredentialResponses[0])
     }
   }
 
@@ -163,3 +169,8 @@ class EBSI_Conformance_Test: StringSpec({
 })
 
 internal typealias credentialOfferRequestCaller = (initCredentialOfferUrl: Url) -> CredentialOfferRequest
+
+internal fun storeCredentials(vararg credentialResponses: CredentialResponse) = credentialResponses.forEach {
+  val cred = VerifiableCredential.fromString(it.credential!!.jsonPrimitive.content)
+  Custodian.getService().storeCredential(cred.id ?: randomUUID(), cred)
+}
