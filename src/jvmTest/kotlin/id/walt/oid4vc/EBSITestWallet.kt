@@ -3,7 +3,6 @@ package id.walt.oid4vc
 import id.walt.core.crypto.utils.JwsUtils.decodeJws
 import id.walt.credentials.w3c.PresentableCredential
 import id.walt.custodian.Custodian
-import id.walt.model.DidMethod
 import id.walt.oid4vc.data.OpenIDProviderMetadata
 import id.walt.oid4vc.data.dif.DescriptorMapping
 import id.walt.oid4vc.data.dif.PresentationDefinition
@@ -24,7 +23,6 @@ import id.walt.services.jwt.JwtService
 import id.walt.services.key.KeyService
 import io.kotest.common.runBlocking
 import io.ktor.client.*
-import io.ktor.client.call.*
 import io.ktor.client.engine.java.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
@@ -33,10 +31,9 @@ import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import io.ktor.util.*
 import kotlinx.datetime.Instant
 import kotlinx.serialization.json.*
-import java.util.UUID
+import java.util.*
 
 const val EBSI_WALLET_PORT = 8011
 const val EBSI_WALLET_BASE_URL = "http://localhost:${EBSI_WALLET_PORT}"
@@ -132,10 +129,6 @@ class EBSITestWallet(config: CredentialWalletConfig): OpenIDCredentialWallet<SIO
       }.mapNotNull {
         it?.filter?.jsonObject?.get("contains")?.jsonObject?.jsonObject?.get("const")?.jsonPrimitive?.content
       }
-//    val filterString = presentationDefinition.inputDescriptors.flatMap { it.constraints?.fields ?: listOf() }
-//      .firstOrNull { field -> field.path.any { it.contains("type") } }?.let {
-//        it.filter?.jsonObject.toString()
-//      }
     val presentationJwtStr = Custodian.getService()
       .createPresentation(Custodian.getService().listCredentials().filter { filterArray.contains(it.type.last()) }
         .map {
@@ -160,23 +153,6 @@ class EBSITestWallet(config: CredentialWalletConfig): OpenIDCredentialWallet<SIO
       listOf(JsonPrimitive(presentationJwtStr)), PresentationSubmission(
         id = UUID.randomUUID().toString(),
         definitionId = session.presentationDefinition!!.id,
-//        descriptorMap = listOf(
-//          "CTWalletSameInTime",
-//          "CTWalletCrossInTime",
-//          "CTWalletSameDeferred",
-//          "CTWalletCrossDeferred",
-//          "CTWalletSamePreAuthorised",
-//          "CTWalletCrossPreAuthorised"
-//        ).mapIndexed { index, c ->
-//          DescriptorMapping(
-//            id = getDescriptorMapId(c), format = VCFormat.jwt_vp,  // jwt_vp_json
-//            path = "$", pathNested = DescriptorMapping(
-//              id = getDescriptorMapId(c),
-//              format = VCFormat.jwt_vc,
-//              path = "$.vp.verifiableCredential[$index]",
-//            )
-//          )
-//        }
         descriptorMap = jwtCredentials.mapIndexed { index, vcJwsStr ->
           val vcJws = vcJwsStr.decodeJws()
           val descriptorId = getDescriptorMapId(
