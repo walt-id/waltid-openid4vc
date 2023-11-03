@@ -55,12 +55,15 @@ class EBSI_Conformance_Test: StringSpec({
     ServiceMatrix("service-matrix.properties")
     credentialWallet = EBSITestWallet(CredentialWalletConfig("https://blank/"))
     ebsiClientConfig = OpenIDClientConfig(credentialWallet.TEST_DID, null, credentialWallet.config.redirectUri, useCodeChallenge = true)
+    Custodian.getService().listCredentialIds().forEach {
+      Custodian.getService().deleteCredential(it)
+    }
   }
 
   /**
    * CTWalletCrossInTime, CTWalletSameInTime
    */
-  "in-time credential".config(enabled = VcTestsEnabled) {
+  "issue in-time credential".config(enabled = VcTestsEnabled) {
     forAll(
       row("CTWalletCrossInTime", crossDeviceCredentialOfferRequestCaller),
       row("CTWalletSameInTime", sameDeviceCredentialOfferRequestCaller),
