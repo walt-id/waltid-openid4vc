@@ -40,6 +40,9 @@ class EBSI_Conformance_Test: AnnotationSpec() {
     ebsiClientConfig = OpenIDClientConfig(credentialWallet.TEST_DID, null, credentialWallet.config.redirectUri, useCodeChallenge = true)
   }
 
+  /**
+   * CTWalletCrossInTime
+   */
   @Test
   fun testReceiveCredential() {
     val initCredentialOfferUrl = URLBuilder("https://api-conformance.ebsi.eu/conformance/v3/issuer-mock/initiate-credential-offer?credential_type=CTWalletCrossInTime").run {
@@ -60,6 +63,9 @@ class EBSI_Conformance_Test: AnnotationSpec() {
     //Custodian.getService().storeCredential(cred.id ?: randomUUID(), cred)
   }
 
+  /**
+   * CTWalletSameInTime
+   */
   @Test
   fun testReceiveCredentialSameDevice() {
     val initCredentialOfferUrl = URLBuilder("https://api-conformance.ebsi.eu/conformance/v3/issuer-mock/initiate-credential-offer?credential_type=CTWalletSameInTime").run {
@@ -82,6 +88,9 @@ class EBSI_Conformance_Test: AnnotationSpec() {
     //Custodian.getService().storeCredential(cred.id ?: randomUUID(), cred)
   }
 
+  /**
+   * CTWalletCrossDeferred
+   */
   @Test
   fun testReceiveCredentialDeferred() {
     val initCredentialOfferUrl = URLBuilder("https://api-conformance.ebsi.eu/conformance/v3/issuer-mock/initiate-credential-offer?credential_type=CTWalletCrossDeferred").run {
@@ -106,6 +115,9 @@ class EBSI_Conformance_Test: AnnotationSpec() {
     credentialResponse.credential shouldNotBe null
   }
 
+  /**
+   * CTWalletCrossPreAuthorised
+   */
   @Test
   fun testPreAuthorizedCodeIssuanceFlow() {
     val initCredentialOfferUrl = URLBuilder("https://api-conformance.ebsi.eu/conformance/v3/issuer-mock/initiate-credential-offer?credential_type=CTWalletCrossPreAuthorised").run {
@@ -124,7 +136,11 @@ class EBSI_Conformance_Test: AnnotationSpec() {
     preAuthCredentialResponses[0].credential shouldNotBe null
   }
 
-//  @Test
+  /**
+   * CTWalletQualificationCredential
+   * Requires a VP with all 6 VCs from above
+   */
+  @Test
   fun testIssuanceWithPresentationExchange() {
     val initIssuanceWithPresentationExchangeUrl = URLBuilder("https://api-conformance.ebsi.eu/conformance/v3/issuer-mock/initiate-credential-offer?credential_type=CTWalletQualificationCredential").run {
       parameters.appendAll(StringValues.build {
