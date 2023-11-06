@@ -123,17 +123,42 @@ class EBSITestWallet(config: CredentialWalletConfig): OpenIDCredentialWallet<SIO
   }
 
   override fun generatePresentationForVPToken(session: SIOPSession, tokenRequest: TokenRequest): PresentationResult {
-    val presentationDefinition = session.presentationDefinition ?: throw PresentationError(TokenErrorCode.invalid_request, tokenRequest, session.presentationDefinition)
-    val filterArray =
-      presentationDefinition.inputDescriptors.flatMap { it.constraints?.fields ?: listOf() }.map { field ->
-        field.takeIf { it.path.any { it.contains("type") } }
-      }.mapNotNull {
-        it?.filter?.jsonObject?.get("contains")?.jsonObject?.jsonObject?.get("const")?.jsonPrimitive?.content
-      }
-    val presentationJwtStr = Custodian.getService().createPresentation(
-        vcs = Custodian.getService().listCredentials().filter { filterArray.contains(it.type.last()) }.map {
+    val presentationDefinition = session.presentationDefinition ?: throw PresentationError(
+      TokenErrorCode.invalid_request, tokenRequest, session.presentationDefinition
+    )
+    val credentialDescriptorMapping = mapCredentialTypes(presentationDefinition)
+    val presentationJwtStr = generatePresentationJwt(credentialDescriptorMapping.map { it.credential }, session)
+
+    println("================")
+    println("PRESENTATION IS: $presentationJwtStr")
+    println("================")
+
+    val presentationJws = presentationJwtStr.decodeJws()
+    val jwtCredentials = ((presentationJws.payload["vp"]
+      ?: throw IllegalArgumentException("VerifiablePresentation string does not contain `vp` attribute?")).jsonObject["verifiableCredential"]
+      ?: throw IllegalArgumentException("VerifiablePresentation does not contain verifiableCredential list?")).jsonArray.map { it.jsonPrimitive.content }
+    return PresentationResult(
+      presentations = listOf(JsonPrimitive(presentationJwtStr)),
+      presentationSubmission = PresentationSubmission(
+        id = UUID.randomUUID().toString(),
+        definitionId = session.presentationDefinition!!.id,
+        descriptorMap = getDescriptorMap(jwtCredentials, credentialDescriptorMapping)
+      )
+    )
+  }
+
+  override fun putSession(id: String, session: SIOPSession): SIOPSession? = sessionCache.put(id, session)
+
+  private fun generatePresentationJwt(credentialTypes: List<String>, session: SIOPSession): String =
+    let {
+      val presentationJwtStr = Custodian.getService().createPresentation(
+        vcs = Custodian.getService().listCredentials()
+          .filter { c -> credentialTypes.contains(c.type.last()) }
+          .map {
             PresentableCredential(
-              it, selectiveDisclosure = null, discloseAll = false
+              verifiableCredential = it,
+              selectiveDisclosure = null,
+              discloseAll = false
             )
           },
         holderDid = TEST_DID,
@@ -141,53 +166,45 @@ class EBSITestWallet(config: CredentialWalletConfig): OpenIDCredentialWallet<SIO
         expirationDate = java.time.Instant.now().plus(Duration.ofDays(1)),
         challenge = session.nonce,
       )
+      presentationJwtStr
+    }
 
-    println("================")
-    println("PRESENTATION IS: $presentationJwtStr")
-    println("================")
-
-    val presentationJws = presentationJwtStr.decodeJws()
-    val jwtCredentials =
-      ((presentationJws.payload["vp"]
-        ?: throw IllegalArgumentException("VerifiablePresentation string does not contain `vp` attribute?"))
-        .jsonObject["verifiableCredential"]
-        ?: throw IllegalArgumentException("VerifiablePresentation does not contain verifiableCredential list?"))
-        .jsonArray.map { it.jsonPrimitive.content }
-    return PresentationResult(
-      listOf(JsonPrimitive(presentationJwtStr)), PresentationSubmission(
-        id = UUID.randomUUID().toString(),
-        definitionId = session.presentationDefinition!!.id,
-        descriptorMap = jwtCredentials.mapIndexed { index, vcJwsStr ->
-          val vcJws = vcJwsStr.decodeJws()
-          val descriptorId = getDescriptorMapId(
-            vcJws.payload["vc"]?.jsonObject?.get("type")?.jsonArray?.last()?.jsonPrimitive?.contentOrNull
-              ?: "VerifiableCredential"
-          )
-          DescriptorMapping(
-            id = descriptorId,
-            format = VCFormat.jwt_vp,  // jwt_vp_json
-            path = "$",
-            pathNested = DescriptorMapping(
-              id = descriptorId,
-              format = VCFormat.jwt_vc,
-              path = "$.vp.verifiableCredential[$index]",
-            )
-          )
+  private fun mapCredentialTypes(presentationDefinition: PresentationDefinition) =
+    presentationDefinition.inputDescriptors.flatMap { descriptor ->
+      descriptor.constraints?.fields?.mapNotNull { field ->
+        field.takeIf { it.path.any { it.contains("type") } }
+      }?.mapNotNull {
+        it.filter?.jsonObject?.get("contains")?.jsonObject?.jsonObject?.get("const")?.jsonPrimitive?.content?.let {
+          CredentialDescriptorMapping(it, descriptor.id)
         }
+      } ?: emptyList()
+    }
+
+  private fun getDescriptorMap(
+    jwtCredentials: List<String>, credentialDescriptor: List<CredentialDescriptorMapping>
+  ): List<DescriptorMapping> = jwtCredentials.mapIndexedNotNull { index, vc ->
+    vc.decodeJws().let {
+      it.payload["vc"]?.jsonObject?.get("type")?.jsonArray?.last()?.jsonPrimitive?.contentOrNull
+        ?: "VerifiableCredential"
+    }.let { c ->
+      credentialDescriptor.find { it.credential == c }
+    }?.let {
+      DescriptorMapping(
+        id = it.descriptor,
+        format = VCFormat.jwt_vp,  // jwt_vp_json
+        path = "$",
+        pathNested = DescriptorMapping(
+          id = it.descriptor,
+          format = VCFormat.jwt_vc,
+          path = "$.vp.verifiableCredential[$index]",
+        )
       )
-    )
+    }
   }
 
-  override fun putSession(id: String, session: SIOPSession): SIOPSession? = sessionCache.put(id, session)
-
-  private fun getDescriptorMapId(type: String) = when (type){
-    "CTWalletSameInTime" -> "same-device-in-time-credential"
-    "CTWalletCrossInTime" -> "cross-device-in-time-credential"
-    "CTWalletSameDeferred" -> "same-device-deferred-credential"
-    "CTWalletCrossDeferred" -> "cross-device-deferred-credential"
-    "CTWalletSamePreAuthorised" -> "same-device-pre_authorised-credential"
-    "CTWalletCrossPreAuthorised" -> "cross-device-pre_authorised-credential"
-    else -> type
-  }
+  private data class CredentialDescriptorMapping(
+    val credential: String,
+    val descriptor: String,
+  )
 
 }
