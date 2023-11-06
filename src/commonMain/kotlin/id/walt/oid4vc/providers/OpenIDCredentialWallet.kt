@@ -3,7 +3,6 @@ package id.walt.oid4vc.providers
 import id.walt.oid4vc.data.*
 import id.walt.oid4vc.data.dif.PresentationDefinition
 import id.walt.oid4vc.definitions.JWTClaims
-import id.walt.oid4vc.definitions.OPENID_CREDENTIAL_AUTHORIZATION_TYPE
 import id.walt.oid4vc.errors.*
 import id.walt.oid4vc.interfaces.IHttpClient
 import id.walt.oid4vc.interfaces.ITokenProvider
@@ -160,18 +159,31 @@ abstract class OpenIDCredentialWallet<S: SIOPSession>(
 
     // ==========================================================
     // ===============  issuance flow ===========================
-    open fun getCredentialOffer(credentialOfferRequest: CredentialOfferRequest): CredentialOffer {
+    open fun resolveCredentialOffer(credentialOfferRequest: CredentialOfferRequest): CredentialOffer {
         return credentialOfferRequest.credentialOffer ?: credentialOfferRequest.credentialOfferUri?.let { uri ->
             httpGetAsJson(Url(uri))?.jsonObject?.let { CredentialOffer.fromJSON(it) }
-        } ?: throw CredentialOfferError(credentialOfferRequest, CredentialOfferErrorCode.invalid_request, "No credential offer value found on request, and credential offer could not be fetched by reference from given credential_offer_uri")
+        } ?: throw CredentialOfferError(credentialOfferRequest, null, CredentialOfferErrorCode.invalid_request, "No credential offer value found on request, and credential offer could not be fetched by reference from given credential_offer_uri")
+    }
+
+    open fun executePreAuthorizedCodeFlow(credentialOffer: CredentialOffer, holderDid: String, client: OpenIDClientConfig, userPIN: String?): List<CredentialResponse> {
+        if(!credentialOffer.grants.containsKey(GrantType.pre_authorized_code.value)) throw CredentialOfferError(null, credentialOffer, CredentialOfferErrorCode.invalid_request, "Pre-authorized code issuance flow executed, but no pre-authorized_code found on credential offer")
+        val issuerMetadataUrl = getCIProviderMetadataUrl(credentialOffer.credentialIssuer)
+        val issuerMetadata = httpGetAsJson(Url(issuerMetadataUrl))?.jsonObject?.let { OpenIDProviderMetadata.fromJSON(it) } ?: throw CredentialOfferError(null, credentialOffer, CredentialOfferErrorCode.invalid_issuer, "Could not resolve issuer provider metadata from $issuerMetadataUrl")
+        val authorizationServerMetadata = issuerMetadata.authorizationServer?.let { authServer ->
+            httpGetAsJson(Url(getCommonProviderMetadataUrl(authServer)))?.jsonObject?.let { OpenIDProviderMetadata.fromJSON(it) }
+        } ?: issuerMetadata
+        val offeredCredentials = credentialOffer.resolveOfferedCredentials(issuerMetadata)
+
+        return executeAuthorizedIssuanceCodeFlow(
+            authorizationServerMetadata, issuerMetadata, credentialOffer, GrantType.pre_authorized_code,
+            offeredCredentials, holderDid, client, null, null, userPIN)
     }
 
     @OptIn(ExperimentalEncodingApi::class)
-    open fun executeFullAuthIssuance(credentialOfferRequest: CredentialOfferRequest, holderDid: String, client: OpenIDClientConfig): List<CredentialResponse> {
-        val credentialOffer = getCredentialOffer(credentialOfferRequest)
-        if(!credentialOffer.grants.containsKey(GrantType.authorization_code.value)) throw CredentialOfferError(credentialOfferRequest, CredentialOfferErrorCode.invalid_request, "Full authorization issuance flow executed, but no authorization_code found on credential offer")
+    open fun executeFullAuthIssuance(credentialOffer: CredentialOffer, holderDid: String, client: OpenIDClientConfig): List<CredentialResponse> {
+        if(!credentialOffer.grants.containsKey(GrantType.authorization_code.value)) throw CredentialOfferError(null, credentialOffer, CredentialOfferErrorCode.invalid_request, "Full authorization issuance flow executed, but no authorization_code found on credential offer")
         val issuerMetadataUrl = getCIProviderMetadataUrl(credentialOffer.credentialIssuer)
-        val issuerMetadata = httpGetAsJson(Url(issuerMetadataUrl))?.jsonObject?.let { OpenIDProviderMetadata.fromJSON(it) } ?: throw CredentialOfferError(credentialOfferRequest, CredentialOfferErrorCode.invalid_issuer, "Could not resolve issuer provider metadata from $issuerMetadataUrl")
+        val issuerMetadata = httpGetAsJson(Url(issuerMetadataUrl))?.jsonObject?.let { OpenIDProviderMetadata.fromJSON(it) } ?: throw CredentialOfferError(null, credentialOffer, CredentialOfferErrorCode.invalid_issuer, "Could not resolve issuer provider metadata from $issuerMetadataUrl")
         val authorizationServerMetadata = issuerMetadata.authorizationServer?.let { authServer ->
             httpGetAsJson(Url(getCommonProviderMetadataUrl(authServer)))?.jsonObject?.let { OpenIDProviderMetadata.fromJSON(it) }
         } ?: issuerMetadata
@@ -223,11 +235,35 @@ abstract class OpenIDCredentialWallet<S: SIOPSession>(
         println("location: $location")
         location = if(location.parameters.contains("response_type") && location.parameters["response_type"] == ResponseType.id_token.name) {
             executeIdTokenAuthorization(location, holderDid, client)
+        } else if(location.parameters.contains("response_type") && location.parameters["response_type"] == ResponseType.vp_token.name) {
+            executeVpTokenAuthorization(location, holderDid, client)
         } else location
 
         val code = location.parameters["code"] ?: throw AuthorizationError(authReq, AuthorizationErrorCode.server_error, "No authorization code received from server")
 
-        val tokenReq = TokenRequest(GrantType.authorization_code, client.clientID, config.redirectUri, code, codeVerifier = codeVerifier)
+        return executeAuthorizedIssuanceCodeFlow(
+            authorizationServerMetadata, issuerMetadata, credentialOffer,
+            GrantType.authorization_code, offeredCredentials, holderDid, client, code, codeVerifier
+        )
+    }
+
+    open fun fetchDeferredCredential(credentialOffer: CredentialOffer, credentialResponse: CredentialResponse): CredentialResponse {
+        if(credentialResponse.acceptanceToken.isNullOrEmpty()) throw CredentialOfferError(null, credentialOffer, CredentialOfferErrorCode.invalid_request, "Credential offer has no acceptance token for fetching deferred credential")
+        val issuerMetadataUrl = getCIProviderMetadataUrl(credentialOffer.credentialIssuer)
+        val issuerMetadata = httpGetAsJson(Url(issuerMetadataUrl))?.jsonObject?.let { OpenIDProviderMetadata.fromJSON(it) } ?: throw CredentialOfferError(null, credentialOffer, CredentialOfferErrorCode.invalid_issuer, "Could not resolve issuer provider metadata from $issuerMetadataUrl")
+        if(issuerMetadata.deferredCredentialEndpoint.isNullOrEmpty()) throw CredentialOfferError(null, credentialOffer, CredentialOfferErrorCode.invalid_issuer, "No deferred credential endpoint found in issuer metadata")
+        val deferredCredResp = httpSubmitForm(Url(issuerMetadata.deferredCredentialEndpoint), parametersOf(), headers {
+            append(HttpHeaders.Authorization, "Bearer ${credentialResponse.acceptanceToken}")
+        })
+        if(!deferredCredResp.status.isSuccess() || deferredCredResp.body.isNullOrEmpty()) throw CredentialError(null, CredentialErrorCode.server_error, "No credential received from deferred credential endpoint, or server responded with error status ${deferredCredResp.status}")
+        return CredentialResponse.fromJSONString(deferredCredResp.body)
+    }
+
+    protected open fun executeAuthorizedIssuanceCodeFlow(authorizationServerMetadata: OpenIDProviderMetadata, issuerMetadata: OpenIDProviderMetadata,
+                                                         credentialOffer: CredentialOffer,
+                                                         grantType: GrantType, offeredCredentials: List<OfferedCredential>, holderDid: String,
+                                                         client: OpenIDClientConfig, authorizationCode: String? = null, codeVerifier: String? = null, userPIN: String? = null): List<CredentialResponse> {
+        val tokenReq = TokenRequest(grantType, client.clientID, config.redirectUri, authorizationCode, credentialOffer.grants[grantType.value]?.preAuthorizedCode, userPIN, codeVerifier)
         val tokenHttpResp = httpSubmitForm(Url(authorizationServerMetadata.tokenEndpoint!!), parametersOf(tokenReq.toHttpParameters()))
         if(!tokenHttpResp.status.isSuccess() || tokenHttpResp.body == null) throw TokenError(tokenReq, TokenErrorCode.server_error, "Server returned error code ${tokenHttpResp.status}, or empty body")
         val tokenResp = TokenResponse.fromJSONString(tokenHttpResp.body)
@@ -241,7 +277,7 @@ abstract class OpenIDCredentialWallet<S: SIOPSession>(
                 executeCredentialRequest(
                     issuerMetadata.credentialEndpoint ?: throw CredentialError(credReq, CredentialErrorCode.server_error, "No credential endpoint specified in issuer metadata"),
                     tokenResp.accessToken, credReq).also {
-                        nonce = it.cNonce ?: nonce
+                    nonce = it.cNonce ?: nonce
                 }
             }
         } else {
@@ -286,6 +322,19 @@ abstract class OpenIDCredentialWallet<S: SIOPSession>(
         if(httpResp.status != HttpStatusCode.Found) throw AuthorizationError(authReq, AuthorizationErrorCode.server_error, "Unexpected status code ${httpResp.status} returned from server for id_token response")
         return httpResp.headers[HttpHeaders.Location]?.let { Url(it) }
             ?: throw AuthorizationError(authReq, AuthorizationErrorCode.server_error, "Location parameter missing on http response for id_token response")
+    }
+
+    open fun executeVpTokenAuthorization(vpTokenRequestUri: Url, holderDid: String, client: OpenIDClientConfig): Url {
+        val authReq = AuthorizationRequest.fromHttpQueryString(vpTokenRequestUri.encodedQuery)
+        val tokenResp = processImplicitFlowAuthorization(authReq.copy(
+            clientId = client.clientID,
+        ))
+        val httpResp = httpSubmitForm(Url(authReq.responseUri ?: authReq.redirectUri!!), parametersOf(tokenResp.toHttpParameters()))
+        return when(httpResp.status) {
+            HttpStatusCode.Found -> httpResp.headers[HttpHeaders.Location]
+            HttpStatusCode.OK -> httpResp.body?.let { AuthorizationDirectPostResponse.fromJSONString(it) }?.redirectUri
+            else -> null
+        }?.let { Url(it) } ?: throw AuthorizationError(authReq, AuthorizationErrorCode.invalid_request, "Request could not be executed")
     }
 
 }

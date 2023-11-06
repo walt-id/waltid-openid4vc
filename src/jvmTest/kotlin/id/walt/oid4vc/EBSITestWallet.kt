@@ -3,7 +3,6 @@ package id.walt.oid4vc
 import id.walt.core.crypto.utils.JwsUtils.decodeJws
 import id.walt.credentials.w3c.PresentableCredential
 import id.walt.custodian.Custodian
-import id.walt.model.DidMethod
 import id.walt.oid4vc.data.OpenIDProviderMetadata
 import id.walt.oid4vc.data.dif.DescriptorMapping
 import id.walt.oid4vc.data.dif.PresentationDefinition
@@ -24,7 +23,6 @@ import id.walt.services.jwt.JwtService
 import id.walt.services.key.KeyService
 import io.kotest.common.runBlocking
 import io.ktor.client.*
-import io.ktor.client.call.*
 import io.ktor.client.engine.java.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
@@ -33,9 +31,10 @@ import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import io.ktor.util.*
 import kotlinx.datetime.Instant
 import kotlinx.serialization.json.*
+import java.time.Duration
+import java.util.*
 
 const val EBSI_WALLET_PORT = 8011
 const val EBSI_WALLET_BASE_URL = "http://localhost:${EBSI_WALLET_PORT}"
@@ -62,6 +61,7 @@ class EBSITestWallet(config: CredentialWalletConfig): OpenIDCredentialWallet<SIO
       KeyService.getService().addAlias(keyId, EBSI_WALLET_TEST_DID)
       val didDoc = DidService.resolve(EBSI_WALLET_TEST_DID)
       KeyService.getService().addAlias(keyId, didDoc.verificationMethod!!.first().id)
+      DidService.importDid(EBSI_WALLET_TEST_DID)
     }
   }
   override fun resolveDID(did: String): String {
@@ -116,64 +116,95 @@ class EBSITestWallet(config: CredentialWalletConfig): OpenIDCredentialWallet<SIO
       headers {
         headers?.let { appendAll(it) }
       }
-      //parameters {
-      //  appendAll(formParameters)
-      //}
+      parameters {
+        appendAll(formParameters)
+      }
     }.let { httpResponse -> SimpleHttpResponse(httpResponse.status, httpResponse.headers, httpResponse.bodyAsText()) } }
   }
 
   override fun generatePresentationForVPToken(session: SIOPSession, tokenRequest: TokenRequest): PresentationResult {
-    val presentationDefinition = session.presentationDefinition ?: throw PresentationError(TokenErrorCode.invalid_request, tokenRequest, session.presentationDefinition)
-    val filterString = presentationDefinition.inputDescriptors.flatMap { it.constraints?.fields ?: listOf() }
-      .firstOrNull { field -> field.path.any { it.contains("type") } }?.filter?.jsonObject.toString()
-    val presentationJwtStr = Custodian.getService()
-      .createPresentation(
-        Custodian.getService().listCredentials().filter { filterString.contains(it.type.last()) }.map {
-          PresentableCredential(
-            it,
-            selectiveDisclosure = null,
-            discloseAll = false
-          )
-        }, TEST_DID, challenge = session.nonce
-      )
+    val presentationDefinition = session.presentationDefinition ?: throw PresentationError(
+      TokenErrorCode.invalid_request, tokenRequest, session.presentationDefinition
+    )
+    val credentialDescriptorMapping = mapCredentialTypes(presentationDefinition)
+    val presentationJwtStr = generatePresentationJwt(credentialDescriptorMapping.map { it.credential }, session)
 
     println("================")
     println("PRESENTATION IS: $presentationJwtStr")
     println("================")
 
     val presentationJws = presentationJwtStr.decodeJws()
-    val jwtCredentials =
-      ((presentationJws.payload["vp"]
-        ?: throw IllegalArgumentException("VerifiablePresentation string does not contain `vp` attribute?"))
-        .jsonObject["verifiableCredential"]
-        ?: throw IllegalArgumentException("VerifiablePresentation does not contain verifiableCredential list?"))
-        .jsonArray.map { it.jsonPrimitive.content }
+    val jwtCredentials = ((presentationJws.payload["vp"]
+      ?: throw IllegalArgumentException("VerifiablePresentation string does not contain `vp` attribute?")).jsonObject["verifiableCredential"]
+      ?: throw IllegalArgumentException("VerifiablePresentation does not contain verifiableCredential list?")).jsonArray.map { it.jsonPrimitive.content }
     return PresentationResult(
-      listOf(JsonPrimitive(presentationJwtStr)), PresentationSubmission(
-        id = "submission 1",
+      presentations = listOf(JsonPrimitive(presentationJwtStr)),
+      presentationSubmission = PresentationSubmission(
+        id = UUID.randomUUID().toString(),
         definitionId = session.presentationDefinition!!.id,
-        descriptorMap = jwtCredentials.mapIndexed { index, vcJwsStr ->
-
-          val vcJws = vcJwsStr.decodeJws()
-          val type =
-            vcJws.payload["vc"]?.jsonObject?.get("type")?.jsonArray?.last()?.jsonPrimitive?.contentOrNull
-              ?: "VerifiableCredential"
-
-          DescriptorMapping(
-            id = type,
-            format = VCFormat.jwt_vp,  // jwt_vp_json
-            path = "$",
-            pathNested = DescriptorMapping(
-              format = VCFormat.jwt_vc,
-              path = "$.vp.verifiableCredential[0]",
-            )
-          )
-        }
+        descriptorMap = getDescriptorMap(jwtCredentials, credentialDescriptorMapping)
       )
     )
   }
 
   override fun putSession(id: String, session: SIOPSession): SIOPSession? = sessionCache.put(id, session)
 
+  private fun generatePresentationJwt(credentialTypes: List<String>, session: SIOPSession): String =
+    let {
+      val presentationJwtStr = Custodian.getService().createPresentation(
+        vcs = Custodian.getService().listCredentials()
+          .filter { c -> credentialTypes.contains(c.type.last()) }
+          .map {
+            PresentableCredential(
+              verifiableCredential = it,
+              selectiveDisclosure = null,
+              discloseAll = false
+            )
+          },
+        holderDid = TEST_DID,
+        verifierDid = "https://api-conformance.ebsi.eu/conformance/v3/auth-mock",
+        expirationDate = java.time.Instant.now().plus(Duration.ofDays(1)),
+        challenge = session.nonce,
+      )
+      presentationJwtStr
+    }
+
+  private fun mapCredentialTypes(presentationDefinition: PresentationDefinition) =
+    presentationDefinition.inputDescriptors.flatMap { descriptor ->
+      descriptor.constraints?.fields?.mapNotNull { field ->
+        field.takeIf { it.path.any { it.contains("type") } }
+      }?.mapNotNull {
+        it.filter?.jsonObject?.get("contains")?.jsonObject?.jsonObject?.get("const")?.jsonPrimitive?.content?.let {
+          CredentialDescriptorMapping(it, descriptor.id)
+        }
+      } ?: emptyList()
+    }
+
+  private fun getDescriptorMap(
+    jwtCredentials: List<String>, credentialDescriptor: List<CredentialDescriptorMapping>
+  ): List<DescriptorMapping> = jwtCredentials.mapIndexedNotNull { index, vc ->
+    vc.decodeJws().let {
+      it.payload["vc"]?.jsonObject?.get("type")?.jsonArray?.last()?.jsonPrimitive?.contentOrNull
+        ?: "VerifiableCredential"
+    }.let { c ->
+      credentialDescriptor.find { it.credential == c }
+    }?.let {
+      DescriptorMapping(
+        id = it.descriptor,
+        format = VCFormat.jwt_vp,  // jwt_vp_json
+        path = "$",
+        pathNested = DescriptorMapping(
+          id = it.descriptor,
+          format = VCFormat.jwt_vc,
+          path = "$.vp.verifiableCredential[$index]",
+        )
+      )
+    }
+  }
+
+  private data class CredentialDescriptorMapping(
+    val credential: String,
+    val descriptor: String,
+  )
 
 }
