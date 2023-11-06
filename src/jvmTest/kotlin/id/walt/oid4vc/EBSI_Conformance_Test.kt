@@ -55,8 +55,10 @@ class EBSI_Conformance_Test: StringSpec({
     ServiceMatrix("service-matrix.properties")
     credentialWallet = EBSITestWallet(CredentialWalletConfig("https://blank/"))
     ebsiClientConfig = OpenIDClientConfig(credentialWallet.TEST_DID, null, credentialWallet.config.redirectUri, useCodeChallenge = true)
-    Custodian.getService().listCredentialIds().forEach {
-      Custodian.getService().deleteCredential(it)
+    VcTestsEnabled.takeIf { it }?.run {
+      Custodian.getService().listCredentialIds().forEach {
+        Custodian.getService().deleteCredential(it)
+      }
     }
   }
 
@@ -168,6 +170,7 @@ class EBSI_Conformance_Test: StringSpec({
     credentialResponses.size shouldBe 1
     credentialResponses[0].isDeferred shouldBe false
     credentialResponses[0].credential shouldNotBe null
+    storeCredentials(credentialResponses[0])
   }
 })
 

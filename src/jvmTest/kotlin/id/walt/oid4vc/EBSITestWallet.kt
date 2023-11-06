@@ -33,6 +33,7 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.datetime.Instant
 import kotlinx.serialization.json.*
+import java.time.Duration
 import java.util.*
 
 const val EBSI_WALLET_PORT = 8011
@@ -129,13 +130,16 @@ class EBSITestWallet(config: CredentialWalletConfig): OpenIDCredentialWallet<SIO
       }.mapNotNull {
         it?.filter?.jsonObject?.get("contains")?.jsonObject?.jsonObject?.get("const")?.jsonPrimitive?.content
       }
-    val presentationJwtStr = Custodian.getService()
-      .createPresentation(Custodian.getService().listCredentials().filter { filterArray.contains(it.type.last()) }
-        .map {
-          PresentableCredential(
-            it, selectiveDisclosure = null, discloseAll = false
-          )
-        }, TEST_DID, challenge = session.nonce
+    val presentationJwtStr = Custodian.getService().createPresentation(
+        vcs = Custodian.getService().listCredentials().filter { filterArray.contains(it.type.last()) }.map {
+            PresentableCredential(
+              it, selectiveDisclosure = null, discloseAll = false
+            )
+          },
+        holderDid = TEST_DID,
+        verifierDid = "https://api-conformance.ebsi.eu/conformance/v3/auth-mock",
+        expirationDate = java.time.Instant.now().plus(Duration.ofDays(1)),
+        challenge = session.nonce,
       )
 
     println("================")
