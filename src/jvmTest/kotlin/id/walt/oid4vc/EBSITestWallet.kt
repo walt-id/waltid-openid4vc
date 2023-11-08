@@ -39,7 +39,7 @@ import java.util.*
 const val EBSI_WALLET_PORT = 8011
 const val EBSI_WALLET_BASE_URL = "http://localhost:${EBSI_WALLET_PORT}"
 const val EBSI_WALLET_TEST_KEY = "{\"kty\":\"EC\",\"d\":\"AENUGJiPF4zRlF1uXV1NTWE5zcQPz-8Ie8SGLdQugec\",\"use\":\"sig\",\"crv\":\"P-256\",\"kid\":\"de8aca52c110485a87fa6fda8d1f2f4e\",\"x\":\"hJ0hFBtp72j1V2xugQI51ernWY_vPXzXjnEg7A709Fc\",\"y\":\"-Mm1j5Zz1mWJU7Nqylk0_6qKjZ5fn6ddzziEFscQPhQ\",\"alg\":\"ES256\"}"
-const val EBSI_WALLET_TEST_DID = "did:key:z2dmzD81cgPx8Vki7JbuuMmFYrWPgYoytykUZ3eyqht1j9KbrksdXfcbvmhgF2h7YfpxWuywkXxDZ7ohTPNPTQpD39Rm9WiBWuEpvvgtfuPHtHi2wTEkZ95KC2ijUMUowyKMueaMhtA5bLYkt9k8Y8Gq4sm6PyTCHTxuyedMMrBKdRXNZS"
+const val EBSI_WALLET_TEST_DID = "did:key:z2dmzD81cgPx8Vki7JbuuMmFYrWPgYoytykUZ3eyqht1j9KbrvNZGYo92og84YugxANd6yfYsq43i85BTx7KDWzNwVVrNiuNmgSSrC11kbg9qg1sm6TJh7soF5vDAgGRBF3wScih9gUCcH7H8Nxd9GAG8hN4AmJnoEtkeUrFU18eb6wNpc"
 class EBSITestWallet(config: CredentialWalletConfig): OpenIDCredentialWallet<SIOPSession>(EBSI_WALLET_BASE_URL, config) {
   private val sessionCache = mutableMapOf<String, SIOPSession>()
   private val ktorClient = HttpClient(Java) {
