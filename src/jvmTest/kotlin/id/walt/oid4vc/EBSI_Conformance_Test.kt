@@ -28,6 +28,7 @@ class EBSI_Conformance_Test: StringSpec({
 
   val VcTestsEnabled = false
   val VpTestsEnabled = false
+  val PRE_AUTHORIZED_ISSUANCE_PIN = "3818"
 
   val credentialOfferUrl = "https://api-conformance.ebsi.eu/conformance/v3/issuer-mock/initiate-credential-offer?credential_type="
 
@@ -120,7 +121,7 @@ class EBSI_Conformance_Test: StringSpec({
       val preAuthCredentialOfferRequest = getCredentialOfferRequest(url, clientId, credentialOfferRequestCall)
       val preAuthCredentialOffer = credentialWallet.resolveCredentialOffer(preAuthCredentialOfferRequest)
       val preAuthCredentialResponses = credentialWallet.executePreAuthorizedCodeFlow(
-        preAuthCredentialOffer, credentialWallet.TEST_DID, ebsiClientConfig, "9511"
+        preAuthCredentialOffer, credentialWallet.TEST_DID, ebsiClientConfig, PRE_AUTHORIZED_ISSUANCE_PIN
       )
       preAuthCredentialResponses.size shouldBe 1
       preAuthCredentialResponses[0].isSuccess shouldBe true
