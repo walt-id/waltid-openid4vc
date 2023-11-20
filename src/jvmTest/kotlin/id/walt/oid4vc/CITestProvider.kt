@@ -46,7 +46,7 @@ import kotlin.time.Duration.Companion.minutes
 const val CI_PROVIDER_PORT = 8000
 const val CI_PROVIDER_BASE_URL = "http://localhost:$CI_PROVIDER_PORT"
 
-class CITestProvider() : OpenIDCredentialIssuer(
+class CITestProvider : OpenIDCredentialIssuer(
     baseUrl = CI_PROVIDER_BASE_URL,
     config = CredentialIssuerConfig(
         credentialsSupported = listOf(
@@ -259,7 +259,7 @@ class CITestProvider() : OpenIDCredentialIssuer(
                 get("/credential_offer/{session_id}") {
                     val sessionId = call.parameters["session_id"]!!
                     val credentialOffer = getSession(sessionId)?.credentialOffer
-                    if(credentialOffer != null) {
+                    if (credentialOffer != null) {
                         call.respond(HttpStatusCode.Created, credentialOffer.toJSON())
                     } else {
                         call.respond(HttpStatusCode.NotFound, "Issuance session with given ID not found")

@@ -7,8 +7,8 @@ import id.walt.oid4vc.data.AuthorizationDetails
 import id.walt.oid4vc.data.CredentialFormat
 import id.walt.oid4vc.data.GrantType
 import id.walt.oid4vc.data.OpenIDProviderMetadata
-import id.walt.oid4vc.providers.OpenIDClientConfig
 import id.walt.oid4vc.providers.CredentialWalletConfig
+import id.walt.oid4vc.providers.OpenIDClientConfig
 import id.walt.oid4vc.requests.AuthorizationRequest
 import id.walt.oid4vc.requests.CredentialOfferRequest
 import id.walt.oid4vc.requests.CredentialRequest
@@ -56,7 +56,7 @@ class wallettest : AnnotationSpec() {
 
     //@BeforeAll   /* Uncomment me */
     fun init() {
-        ServiceMatrix("service-matrix.properties")
+        ServiceMatrix("test-config/service-matrix.properties")
         ciTestProvider = CITestProvider()
         credentialWallet = TestCredentialWallet(CredentialWalletConfig("http://blank"))
         //ciTestProvider.start()

@@ -24,151 +24,152 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.util.*
 import kotlinx.serialization.json.jsonPrimitive
 
-class EBSI_Conformance_Test: StringSpec({
+class EBSI_Conformance_Test : StringSpec({
 
-  val VcTestsEnabled = false
-  val VpTestsEnabled = false
-  val PRE_AUTHORIZED_ISSUANCE_PIN = "3818"
+    val VcTestsEnabled = false
+    val VpTestsEnabled = false
+    val PRE_AUTHORIZED_ISSUANCE_PIN = "3818"
 
-  val credentialOfferUrl = "https://api-conformance.ebsi.eu/conformance/v3/issuer-mock/initiate-credential-offer?credential_type="
+    val credentialOfferUrl = "https://api-conformance.ebsi.eu/conformance/v3/issuer-mock/initiate-credential-offer?credential_type="
 
-  lateinit var credentialWallet: EBSITestWallet
-  lateinit var ebsiClientConfig: OpenIDClientConfig
+    lateinit var credentialWallet: EBSITestWallet
+    lateinit var ebsiClientConfig: OpenIDClientConfig
 
-  val ktorClient = HttpClient(Java) {
-    install(ContentNegotiation) {
-      json()
+    val ktorClient = HttpClient(Java) {
+        install(ContentNegotiation) {
+            json()
+        }
+        followRedirects = false
     }
-    followRedirects = false
-  }
 
-  val crossDeviceCredentialOfferRequestCaller: credentialOfferRequestCaller = { initCredentialOfferUrl ->
-    val inTimeCredentialOfferRequestUri = runBlocking { ktorClient.get(initCredentialOfferUrl).bodyAsText() }
-    CredentialOfferRequest.fromHttpQueryString(Url(inTimeCredentialOfferRequestUri).encodedQuery)
-  }
-
-  val sameDeviceCredentialOfferRequestCaller: credentialOfferRequestCaller = { initCredentialOfferUrl ->
-    val httpResp = runBlocking { ktorClient.get(initCredentialOfferUrl) }
-    httpResp.status shouldBe HttpStatusCode.Found
-    val inTimeCredentialOfferRequestUri = httpResp.headers[HttpHeaders.Location]!!
-    CredentialOfferRequest.fromHttpQueryString(Url(inTimeCredentialOfferRequestUri).encodedQuery)
-  }
-
-  beforeSpec {
-    ServiceMatrix("service-matrix.properties")
-    credentialWallet = EBSITestWallet(CredentialWalletConfig("https://blank/"))
-    ebsiClientConfig = OpenIDClientConfig(credentialWallet.TEST_DID, null, credentialWallet.config.redirectUri, useCodeChallenge = true)
-    VcTestsEnabled.takeIf { it }?.run {
-      Custodian.getService().listCredentialIds().forEach {
-        Custodian.getService().deleteCredential(it)
-      }
+    val crossDeviceCredentialOfferRequestCaller: credentialOfferRequestCaller = { initCredentialOfferUrl ->
+        val inTimeCredentialOfferRequestUri = runBlocking { ktorClient.get(initCredentialOfferUrl).bodyAsText() }
+        CredentialOfferRequest.fromHttpQueryString(Url(inTimeCredentialOfferRequestUri).encodedQuery)
     }
-  }
 
-  /**
-   * CTWalletCrossInTime, CTWalletSameInTime
-   */
-  "issue in-time credential".config(enabled = VcTestsEnabled) {
-    forAll(
-      row("${credentialOfferUrl}CTWalletSameInTime", credentialWallet.TEST_DID, sameDeviceCredentialOfferRequestCaller),
-      row("${credentialOfferUrl}CTWalletCrossInTime", credentialWallet.TEST_DID, crossDeviceCredentialOfferRequestCaller),
-    ) { url, clientId, credentialOfferRequestCall ->
-      val credentialOfferRequest = getCredentialOfferRequest(url, clientId, credentialOfferRequestCall)
-      val credentialOffer = credentialWallet.resolveCredentialOffer(credentialOfferRequest)
-      val credentialResponses =
-        credentialWallet.executeFullAuthIssuance(credentialOffer, credentialWallet.TEST_DID, ebsiClientConfig)
-      credentialResponses.size shouldBe 1
-      credentialResponses[0].isDeferred shouldBe false
-      credentialResponses[0].credential shouldNotBe null
-      storeCredentials(credentialResponses[0])
+    val sameDeviceCredentialOfferRequestCaller: credentialOfferRequestCaller = { initCredentialOfferUrl ->
+        val httpResp = runBlocking { ktorClient.get(initCredentialOfferUrl) }
+        httpResp.status shouldBe HttpStatusCode.Found
+        val inTimeCredentialOfferRequestUri = httpResp.headers[HttpHeaders.Location]!!
+        CredentialOfferRequest.fromHttpQueryString(Url(inTimeCredentialOfferRequestUri).encodedQuery)
     }
-  }
 
-  /**
-   * CTWalletCrossDeferred, CTWalletSameDeferred
-   */
-  "issue deferred credential".config(enabled = VcTestsEnabled) {
-    forAll(
-      row("${credentialOfferUrl}CTWalletSameDeferred", credentialWallet.TEST_DID, sameDeviceCredentialOfferRequestCaller),
-      row("${credentialOfferUrl}CTWalletCrossDeferred", credentialWallet.TEST_DID, crossDeviceCredentialOfferRequestCaller),
-    ) { url, clientId, credentialOfferRequestCall ->
-      val deferredCredentialOfferRequest = getCredentialOfferRequest(url, clientId, credentialOfferRequestCall)
-      val deferredCredentialOffer = credentialWallet.resolveCredentialOffer(deferredCredentialOfferRequest)
-      val deferredCredentialResponses =
-        credentialWallet.executeFullAuthIssuance(deferredCredentialOffer, credentialWallet.TEST_DID, ebsiClientConfig)
-      deferredCredentialResponses.size shouldBe 1
-      deferredCredentialResponses[0].isDeferred shouldBe true
-      println("Waiting for deferred credential to be issued (5 seconds delay)")
-      Thread.sleep(5500)
-      println("Trying to fetch deferred credential")
-      val credentialResponse =
-        credentialWallet.fetchDeferredCredential(deferredCredentialOffer, deferredCredentialResponses[0])
-      credentialResponse.isDeferred shouldBe false
-      credentialResponse.isSuccess shouldBe true
-      credentialResponse.credential shouldNotBe null
-      storeCredentials(credentialResponse)
+    beforeSpec {
+        ServiceMatrix("service-matrix.properties")
+        credentialWallet = EBSITestWallet(CredentialWalletConfig("https://blank/"))
+        ebsiClientConfig = OpenIDClientConfig(credentialWallet.TEST_DID, null, credentialWallet.config.redirectUri, useCodeChallenge = true)
+        VcTestsEnabled.takeIf { it }?.run {
+            Custodian.getService().listCredentialIds().forEach {
+                Custodian.getService().deleteCredential(it)
+            }
+        }
     }
-  }
 
-  /**
-   * CTWalletCrossPreAuthorised, CTWalletSamePreAuthorised
-   */
-  "issue pre-authorized code credential".config(enabled = VcTestsEnabled) {
-    forAll(
-      row("${credentialOfferUrl}CTWalletSamePreAuthorised", credentialWallet.TEST_DID, sameDeviceCredentialOfferRequestCaller),
-      row("${credentialOfferUrl}CTWalletCrossPreAuthorised", credentialWallet.TEST_DID, crossDeviceCredentialOfferRequestCaller),
-    ) { url, clientId, credentialOfferRequestCall ->
-      val preAuthCredentialOfferRequest = getCredentialOfferRequest(url, clientId, credentialOfferRequestCall)
-      val preAuthCredentialOffer = credentialWallet.resolveCredentialOffer(preAuthCredentialOfferRequest)
-      val preAuthCredentialResponses = credentialWallet.executePreAuthorizedCodeFlow(
-        preAuthCredentialOffer, credentialWallet.TEST_DID, ebsiClientConfig, PRE_AUTHORIZED_ISSUANCE_PIN
-      )
-      preAuthCredentialResponses.size shouldBe 1
-      preAuthCredentialResponses[0].isSuccess shouldBe true
-      preAuthCredentialResponses[0].credential shouldNotBe null
-      storeCredentials(preAuthCredentialResponses[0])
+    /**
+     * CTWalletCrossInTime, CTWalletSameInTime
+     */
+    "issue in-time credential".config(enabled = VcTestsEnabled) {
+        forAll(
+            row("${credentialOfferUrl}CTWalletSameInTime", credentialWallet.TEST_DID, sameDeviceCredentialOfferRequestCaller),
+            row("${credentialOfferUrl}CTWalletCrossInTime", credentialWallet.TEST_DID, crossDeviceCredentialOfferRequestCaller),
+        ) { url, clientId, credentialOfferRequestCall ->
+            val credentialOfferRequest = getCredentialOfferRequest(url, clientId, credentialOfferRequestCall)
+            val credentialOffer = credentialWallet.resolveCredentialOffer(credentialOfferRequest)
+            val credentialResponses =
+                credentialWallet.executeFullAuthIssuance(credentialOffer, credentialWallet.TEST_DID, ebsiClientConfig)
+            credentialResponses.size shouldBe 1
+            credentialResponses[0].isDeferred shouldBe false
+            credentialResponses[0].credential shouldNotBe null
+            storeCredentials(credentialResponses[0])
+        }
     }
-  }
 
-  /**
-   * CTWalletQualificationCredential
-   * Requires all VCs from above
-   */
-  "issue credential using presentation exchange".config(enabled = VpTestsEnabled) {
-    val initIssuanceWithPresentationExchangeUrl = URLBuilder("https://api-conformance.ebsi.eu/conformance/v3/issuer-mock/initiate-credential-offer?credential_type=CTWalletQualificationCredential").run {
-      parameters.appendAll(StringValues.build {
-        append("client_id", credentialWallet.TEST_DID)
-        append("credential_offer_endpoint", "openid-credential-offer://")
-      })
-      build()
+    /**
+     * CTWalletCrossDeferred, CTWalletSameDeferred
+     */
+    "issue deferred credential".config(enabled = VcTestsEnabled) {
+        forAll(
+            row("${credentialOfferUrl}CTWalletSameDeferred", credentialWallet.TEST_DID, sameDeviceCredentialOfferRequestCaller),
+            row("${credentialOfferUrl}CTWalletCrossDeferred", credentialWallet.TEST_DID, crossDeviceCredentialOfferRequestCaller),
+        ) { url, clientId, credentialOfferRequestCall ->
+            val deferredCredentialOfferRequest = getCredentialOfferRequest(url, clientId, credentialOfferRequestCall)
+            val deferredCredentialOffer = credentialWallet.resolveCredentialOffer(deferredCredentialOfferRequest)
+            val deferredCredentialResponses =
+                credentialWallet.executeFullAuthIssuance(deferredCredentialOffer, credentialWallet.TEST_DID, ebsiClientConfig)
+            deferredCredentialResponses.size shouldBe 1
+            deferredCredentialResponses[0].isDeferred shouldBe true
+            println("Waiting for deferred credential to be issued (5 seconds delay)")
+            Thread.sleep(5500)
+            println("Trying to fetch deferred credential")
+            val credentialResponse =
+                credentialWallet.fetchDeferredCredential(deferredCredentialOffer, deferredCredentialResponses[0])
+            credentialResponse.isDeferred shouldBe false
+            credentialResponse.isSuccess shouldBe true
+            credentialResponse.credential shouldNotBe null
+            storeCredentials(credentialResponse)
+        }
     }
-    val credentialOfferRequestUri = runBlocking { ktorClient.get(initIssuanceWithPresentationExchangeUrl).bodyAsText() }
-    val credentialOfferRequest = CredentialOfferRequest.fromHttpQueryString(Url(credentialOfferRequestUri).encodedQuery)
-    val credentialOffer = credentialWallet.resolveCredentialOffer(credentialOfferRequest)
-    val credentialResponses = credentialWallet.executeFullAuthIssuance(credentialOffer, credentialWallet.TEST_DID, ebsiClientConfig)
-    credentialResponses.size shouldBe 1
-    credentialResponses[0].isDeferred shouldBe false
-    credentialResponses[0].credential shouldNotBe null
-    storeCredentials(credentialResponses[0])
-  }
+
+    /**
+     * CTWalletCrossPreAuthorised, CTWalletSamePreAuthorised
+     */
+    "issue pre-authorized code credential".config(enabled = VcTestsEnabled) {
+        forAll(
+            row("${credentialOfferUrl}CTWalletSamePreAuthorised", credentialWallet.TEST_DID, sameDeviceCredentialOfferRequestCaller),
+            row("${credentialOfferUrl}CTWalletCrossPreAuthorised", credentialWallet.TEST_DID, crossDeviceCredentialOfferRequestCaller),
+        ) { url, clientId, credentialOfferRequestCall ->
+            val preAuthCredentialOfferRequest = getCredentialOfferRequest(url, clientId, credentialOfferRequestCall)
+            val preAuthCredentialOffer = credentialWallet.resolveCredentialOffer(preAuthCredentialOfferRequest)
+            val preAuthCredentialResponses = credentialWallet.executePreAuthorizedCodeFlow(
+                preAuthCredentialOffer, credentialWallet.TEST_DID, ebsiClientConfig, PRE_AUTHORIZED_ISSUANCE_PIN
+            )
+            preAuthCredentialResponses.size shouldBe 1
+            preAuthCredentialResponses[0].isSuccess shouldBe true
+            preAuthCredentialResponses[0].credential shouldNotBe null
+            storeCredentials(preAuthCredentialResponses[0])
+        }
+    }
+
+    /**
+     * CTWalletQualificationCredential
+     * Requires all VCs from above
+     */
+    "issue credential using presentation exchange".config(enabled = VpTestsEnabled) {
+        val initIssuanceWithPresentationExchangeUrl =
+            URLBuilder("https://api-conformance.ebsi.eu/conformance/v3/issuer-mock/initiate-credential-offer?credential_type=CTWalletQualificationCredential").run {
+                parameters.appendAll(StringValues.build {
+                    append("client_id", credentialWallet.TEST_DID)
+                    append("credential_offer_endpoint", "openid-credential-offer://")
+                })
+                build()
+            }
+        val credentialOfferRequestUri = runBlocking { ktorClient.get(initIssuanceWithPresentationExchangeUrl).bodyAsText() }
+        val credentialOfferRequest = CredentialOfferRequest.fromHttpQueryString(Url(credentialOfferRequestUri).encodedQuery)
+        val credentialOffer = credentialWallet.resolveCredentialOffer(credentialOfferRequest)
+        val credentialResponses = credentialWallet.executeFullAuthIssuance(credentialOffer, credentialWallet.TEST_DID, ebsiClientConfig)
+        credentialResponses.size shouldBe 1
+        credentialResponses[0].isDeferred shouldBe false
+        credentialResponses[0].credential shouldNotBe null
+        storeCredentials(credentialResponses[0])
+    }
 })
 
 internal typealias credentialOfferRequestCaller = (initCredentialOfferUrl: Url) -> CredentialOfferRequest
 
 internal fun storeCredentials(vararg credentialResponses: CredentialResponse) = credentialResponses.forEach {
-  val cred = VerifiableCredential.fromString(it.credential!!.jsonPrimitive.content)
-  Custodian.getService().storeCredential(cred.id ?: randomUUID(), cred)
+    val cred = VerifiableCredential.fromString(it.credential!!.jsonPrimitive.content)
+    Custodian.getService().storeCredential(cred.id ?: randomUUID(), cred)
 }
 
 internal fun getCredentialOfferRequest(
-  url: String, clientId: String? = null, credentialOfferRequestCall: credentialOfferRequestCaller? = null
+    url: String, clientId: String? = null, credentialOfferRequestCall: credentialOfferRequestCaller? = null
 ) = clientId?.let {
-  val initCredentialOfferUrl = URLBuilder(url).run {
-    parameters.appendAll(StringValues.build {
-      append("client_id", clientId)
-      append("credential_offer_endpoint", "openid-credential-offer://")
-    })
-    build()
-  }
-  credentialOfferRequestCall!!(initCredentialOfferUrl)
+    val initCredentialOfferUrl = URLBuilder(url).run {
+        parameters.appendAll(StringValues.build {
+            append("client_id", clientId)
+            append("credential_offer_endpoint", "openid-credential-offer://")
+        })
+        build()
+    }
+    credentialOfferRequestCall!!(initCredentialOfferUrl)
 } ?: CredentialOfferRequest(credentialOfferUri = url)
